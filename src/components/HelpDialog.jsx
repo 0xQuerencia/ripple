@@ -1,6 +1,22 @@
 import { useEffect, useRef } from "react";
 import { Sprite } from "../art/Sprite.jsx";
 
+const STEPS = [
+  [
+    "ask anything",
+    "type any what-if, tap a sticker, or drag one onto the map.",
+  ],
+  [
+    "watch it spread",
+    "gemma 4 draws a brand new map: every thing the cause touches gets a picture, and the ink shows what follows from what.",
+  ],
+  [
+    "dig in",
+    "tap any node to see who feels it, how soon, and how sure gemma is. the big picture adds it all up.",
+  ],
+  ["compare", "pin one, start over, and ask something different."],
+];
+
 export function HelpDialog({ open, onClose }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -22,35 +38,16 @@ export function HelpDialog({ open, onClose }) {
       <Sprite id="butterfly" scale={2} />
       <h2 id="help-title">one tiny change, a whole new story.</h2>
       <ol className="steps">
-        <li>
-          <span className="step-title">drop a cause</span>
-          <span className="step-meta">
-            drag a sticker onto a thing, or tap the sticker and then the thing.
-          </span>
-        </li>
-        <li>
-          <span className="step-title">watch it spread</span>
-          <span className="step-meta">
-            gemma 4 follows real links on the map, up to three rounds out.
-          </span>
-        </li>
-        <li>
-          <span className="step-title">trace it back</span>
-          <span className="step-meta">
-            tap any note to see how the ripple got there. scrub or replay to
-            look closer.
-          </span>
-        </li>
-        <li>
-          <span className="step-title">compare</span>
-          <span className="step-meta">
-            pin one, start over, and try a different cause.
-          </span>
-        </li>
+        {STEPS.map(([title, text]) => (
+          <li key={title}>
+            <span className="step-title">{title}</span>
+            <span className="step-meta">{text}</span>
+          </li>
+        ))}
       </ol>
       <p className="meta">
-        every effect is a possibility, checked against the map. gemma can’t
-        invent a link that doesn’t exist.
+        every effect is a possibility, not a prediction. gemma can be wrong, so
+        treat this as a thinking toy, not a forecast.
       </p>
       <button type="button" className="pixel-button" onClick={onClose}>
         let’s get curious
