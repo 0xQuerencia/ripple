@@ -1622,3 +1622,52 @@ h1 span:after {
     scroll-behavior: auto !important;
   }
 }
+
+/* Keep small type readable on the warm paper background. */
+.panel-description,
+.intro p,
+.world-heading > div > span,
+.cause-panel .custom-block > small,
+.inspector > p,
+.notebook-bottom,
+.canvas-footer,
+.world-state,
+.app-footer {
+  color: #707960;
+}
+.canvas-top-note,
+.canvas-note {
+  color: #7e886b;
+}
+.node-status {
+  color: #657055;
+}
+@media (max-width: 640px) {
+  .header-actions .demo-badge {
+    display: flex;
+    position: absolute;
+    right: 0;
+    top: 43px;
+    white-space: nowrap;
+    font-size: 7px;
+  }
+  .canvas-hint {
+    display: none;
+  }
+  .custom-block .try-button {
+    font-size: 14px;
+    padding: 7px;
+  }
+  .canvas {
+    min-height: 440px;
+  }
+  .intro-sun {
+    bottom: 17px;
+  }
+}
+
+@media (max-width: 640px) {
+  .canvas-footer .canvas-hint {
+    display: none;
+  }
+}

@@ -86,6 +86,7 @@ export default function App() {
     [notice, setNotice] = useState(""),
     [saved, setSaved] = useState(null),
     [focusedEvent, setFocusedEvent] = useState(null);
+  const canvasRef = useRef(null);
   const flow = useRef(null),
     visible = events.slice(0, cursor),
     system = SYSTEM_BY_ID[selected],
@@ -105,6 +106,22 @@ export default function App() {
     const timer = setTimeout(() => setNotice(""), 4500);
     return () => clearTimeout(timer);
   }, [notice]);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    let frame;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() =>
+        flow.current?.fitView({ padding: 0.18 }),
+      );
+    });
+    observer.observe(canvas);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+    };
+  }, [tab]);
   const displayNodes = nodes.map((n) => ({
     ...n,
     data: {
@@ -388,7 +405,10 @@ export default function App() {
             </span>
           </div>
           {tab === "world" ? (
-            <div className={`canvas ${cause ? "choosing" : ""}`}>
+            <div
+              ref={canvasRef}
+              className={`canvas ${cause ? "choosing" : ""}`}
+            >
               <div className="canvas-top-note">
                 {cause
                   ? `where does “${cause.title}” begin?`
@@ -743,6 +763,22 @@ export default function App() {
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => {
               if (e.key === "Escape") setHelp(false);
+              if (e.key === "Tab") {
+                const focusable = [
+                  ...e.currentTarget.querySelectorAll(
+                    "button, a[href], input, textarea",
+                  ),
+                ];
+                const first = focusable[0],
+                  last = focusable.at(-1);
+                if (e.shiftKey && document.activeElement === first) {
+                  e.preventDefault();
+                  last.focus();
+                } else if (!e.shiftKey && document.activeElement === last) {
+                  e.preventDefault();
+                  first.focus();
+                }
+              }
             }}
           >
             <button
