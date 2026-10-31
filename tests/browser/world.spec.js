@@ -100,7 +100,10 @@ test("keyboard, mobile sizing, custom causes, and help work", async ({
   await page
     .getByRole("textbox", { name: "Your own cause" })
     .fill("a rainy weekend");
-  await page.getByRole("button", { name: "see what happens" }).click();
+  await page
+    .locator(".whatif")
+    .getByRole("button", { name: "see what happens" })
+    .click();
   await settled(page);
   await expect(steps(page).first()).toContainText("a rainy weekend");
   // keyboard: focus a node and press Enter to read its notes
@@ -128,4 +131,42 @@ test("cause stickers can be dropped onto the map", async ({ page }) => {
   await page.getByTestId("cause-blackout").dragTo(page.locator(".canvas"));
   await settled(page);
   await expect(steps(page)).toHaveCount(expected.length);
+});
+
+test("a judge can just start typing a brand new question and watch Gemma work", async ({
+  page,
+}) => {
+  await page.goto("/");
+  // nothing was clicked: the big box already has the keyboard
+  await expect(page.locator("#ask-text")).toBeFocused();
+  await page.keyboard.type("what if cats ruled the world");
+  await page.keyboard.press("Enter");
+  // while the ripple is being written, a live panel shows what is happening
+  await expect(page.locator(".live")).toBeVisible();
+  await expect(page.locator(".live")).toContainText("it begins at");
+  await settled(page);
+  await expect(page.locator(".live")).toHaveCount(0);
+  await expect(steps(page).first()).toContainText(
+    "what if cats ruled the world",
+  );
+  expect(await nodes(page).count()).toBeGreaterThan(4);
+});
+
+test("shift+enter adds a line instead of sending", async ({ page }) => {
+  await page.goto("/");
+  await page.keyboard.type("first line");
+  await page.keyboard.press("Shift+Enter");
+  await page.keyboard.type("second line");
+  await expect(page.locator("#ask-text")).toHaveValue(
+    "first line\nsecond line",
+  );
+  await expect(nodes(page)).toHaveCount(0);
+});
+
+test("long questions are accepted up to the limit and no further", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.locator("#ask-text").fill("x".repeat(400));
+  expect((await page.locator("#ask-text").inputValue()).length).toBe(160);
 });

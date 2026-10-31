@@ -441,3 +441,150 @@
   outline: 4px dashed var(--accent);
   outline-offset: -12px;
 }
+
+/* ---- the big ask box and the live thinking panel ---- */
+.ask {
+  display: grid;
+  gap: 12px;
+  width: min(560px, 100%);
+  margin-top: 6px;
+  pointer-events: auto;
+}
+.ask textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 5px solid var(--line);
+  border-radius: 4px;
+  background: #f4f2f3;
+  color: var(--ink);
+  font-size: 30px;
+  line-height: 1.1;
+  resize: none;
+  outline: 2px solid #ebe7ea;
+  outline-offset: -10px;
+}
+.ask textarea::placeholder {
+  color: var(--line-2);
+  opacity: 1;
+}
+.ask textarea:focus {
+  border-color: var(--accent);
+  outline-color: #f6e3e1;
+}
+.ask textarea:disabled {
+  opacity: 0.55;
+}
+.ask-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ask .pixel-button {
+  padding: 8px 18px 10px;
+  font-size: 24px;
+}
+.invite .try {
+  margin-top: 6px;
+  font-size: var(--t-small);
+}
+
+.live {
+  position: absolute;
+  z-index: 6;
+  top: 16px;
+  left: 50%;
+  display: grid;
+  gap: 6px;
+  width: min(430px, calc(100% - 28px));
+  padding: 12px 16px 14px;
+  border-radius: 4px;
+  background: var(--btn);
+  color: var(--bg);
+  translate: -50% 0;
+  animation: pop-in 360ms steps(4, end) both;
+}
+.live-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.live-brain {
+  animation: hop 1s steps(2, end) infinite;
+}
+.live-title {
+  font-size: 26px;
+  line-height: 1;
+}
+.live-title b {
+  font-weight: 400;
+  color: #f0cdca;
+}
+.live-line {
+  max-width: none;
+  font-size: var(--t-small);
+  line-height: 1.1;
+  color: #e6e1e3;
+}
+.live-line q {
+  quotes: none;
+  color: #f0cdca;
+}
+.live-progress {
+  color: #cfc8cb;
+}
+.live-ticker {
+  display: grid;
+  gap: 3px;
+  margin-top: 4px;
+  font-size: var(--t-small);
+  line-height: 1.1;
+  color: #bdb5b9;
+}
+.live-ticker li {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.live-ticker b {
+  font-weight: 400;
+  color: #f0cdca;
+}
+.live-ticker .is-newest {
+  color: var(--bg);
+}
+.live-ticker .is-newest::after {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 14px;
+  margin-left: 5px;
+  vertical-align: -2px;
+  background: var(--bg);
+  animation: blink 800ms steps(2, end) infinite;
+}
+@media (max-width: 1180px) {
+  .ask textarea {
+    font-size: 24px;
+  }
+  .invite h1 {
+    font-size: 42px;
+  }
+}
+
+.node-name {
+  overflow-wrap: break-word;
+  font-size: 22px;
+  max-width: 132px;
+}
+.live-title {
+  font-size: 24px;
+}
+
+@media (max-width: 1180px) {
+  /* A short board on a phone: start at the top, scroll if needed, and keep only the first few examples. */
+  .invite { align-content: start; gap: 10px; padding: 26px 16px 20px; overflow-y: auto; pointer-events: auto; }
+  .invite h1 { font-size: 36px; }
+  .examples li:nth-child(n + 5) { display: none; }
+}

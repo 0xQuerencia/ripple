@@ -18,6 +18,7 @@ const IDLE = {
   cursor: 0,
   live: true,
   replaying: false,
+  startedAt: 0,
 };
 
 /** Link each effect to the earlier event that created the node it follows from. */
@@ -31,7 +32,7 @@ function withParent(events, effect, id) {
 function reducer(state, action) {
   switch (action.type) {
     case "begin": {
-      const { runId, cause } = action;
+      const { runId, cause, now } = action;
       // The cause is on the board straight away; Gemma says where it belongs a moment later.
       const first = {
         id: `${runId}-0`,
@@ -51,6 +52,7 @@ function reducer(state, action) {
       return {
         ...IDLE,
         runId,
+        startedAt: now,
         status: "streaming",
         events: [first],
         cursor: 1,
@@ -154,7 +156,7 @@ export function useRipple({ onProblem }) {
       const controller = new AbortController();
       abort.current = controller;
       const runId = crypto.randomUUID();
-      dispatch({ type: "begin", runId, cause });
+      dispatch({ type: "begin", runId, cause, now: Date.now() });
 
       const api = cause.id
         ? { causeId: cause.id }

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Sprite } from "../art/Sprite.jsx";
 import { Jiggle } from "./Jiggle.jsx";
+import { ToneToggle } from "./ToneToggle.jsx";
 import { CAUSES } from "../../shared/world.mjs";
-
-const MAX_CAUSE_LENGTH = 80;
+import { MAX_CAUSE_TEXT } from "../../shared/ripple.mjs";
 
 export function CauseTray({ busy, onRun, onDragCause }) {
   const [text, setText] = useState("");
@@ -40,31 +40,17 @@ export function CauseTray({ busy, onRun, onDragCause }) {
         <textarea
           id="whatif-text"
           rows={2}
-          maxLength={MAX_CAUSE_LENGTH}
+          maxLength={MAX_CAUSE_TEXT}
           value={text}
           disabled={busy}
           placeholder="anything. the moon disappears. cats learn to talk…"
           onChange={(event) => setText(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey) handleSubmit(event);
+          }}
         />
         <div className="whatif-row">
-          <fieldset className="tone">
-            <legend className="sr-only">What kind of change is it?</legend>
-            {[
-              ["negative", "a disruption"],
-              ["positive", "good news"],
-            ].map(([value, label]) => (
-              <label key={value} className={tone === value ? "is-on" : ""}>
-                <input
-                  type="radio"
-                  name="tone"
-                  value={value}
-                  checked={tone === value}
-                  onChange={() => setTone(value)}
-                />
-                {label}
-              </label>
-            ))}
-          </fieldset>
+          <ToneToggle name="tone" value={tone} onChange={setTone} />
           <button
             type="submit"
             className="pixel-button"

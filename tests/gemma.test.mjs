@@ -7,6 +7,7 @@ import {
   streamGemma,
 } from "../server/gemma.mjs";
 import { createApi } from "../server/api.mjs";
+import { MAX_CAUSE_TEXT } from "../shared/ripple.mjs";
 
 // What Gemma writes for a preset cause that starts at the known node "power".
 const POWER_LINES = [
@@ -456,7 +457,11 @@ test("api: validates input", async () => {
     400,
   );
   assert.equal(
-    (await call(api, "POST", "/api/ripple", { text: "x".repeat(81) })).status,
+    (
+      await call(api, "POST", "/api/ripple", {
+        text: "x".repeat(MAX_CAUSE_TEXT + 1),
+      })
+    ).status,
     400,
   );
   assert.equal((await call(api, "POST", "/api/ripple", {})).status, 400);
@@ -607,4 +612,22 @@ test("api: empty Gemma answers are retried", async () => {
     causeId: "blackout",
   });
   assert.equal(events[0].mode, "gemma");
+});
+
+test("api: a long, chatty question up to the limit is accepted and passed to Gemma", async () => {
+  const text =
+    "what would happen to the world if every single cat on earth suddenly learned to speak fluent human languages overnight? ".slice(
+      0,
+      MAX_CAUSE_TEXT,
+    );
+  let sent = "";
+  const fetchImpl = async (_url, init) => {
+    sent = JSON.parse(init.body).contents[0].parts[0].text;
+    return sseResponse(MOON_LINES);
+  };
+  const api = createApi({ apiKey: "k", model: "m", fetchImpl });
+  const { status, events } = await call(api, "POST", "/api/ripple", { text });
+  assert.equal(status, 200);
+  assert.equal(events[0].mode, "gemma");
+  assert.ok(sent.includes(`<cause>${text.trim()}</cause>`));
 });

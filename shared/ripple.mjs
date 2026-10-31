@@ -2,6 +2,9 @@ import { DOMAINS, SYSTEM_BY_ID } from "./world.mjs";
 import { ICON_IDS } from "./icons.mjs";
 import { TIMEFRAMES } from "./engine.mjs";
 
+/** The longest question a visitor may ask, in characters. Shared by the form and the server. */
+export const MAX_CAUSE_TEXT = 160;
+
 /** The shape of an open-ended ripple. Gemma may invent anything inside these limits. */
 export const RIPPLE_LIMITS = { rounds: 5, perRound: 7, nodes: 28 };
 

@@ -1,6 +1,10 @@
 import { DOMAINS, SYSTEMS, SYSTEM_BY_ID } from "../shared/world.mjs";
 import { ICON_IDS } from "../shared/icons.mjs";
-import { RIPPLE_LIMITS, createRippleBuilder } from "../shared/ripple.mjs";
+import {
+  MAX_CAUSE_TEXT,
+  RIPPLE_LIMITS,
+  createRippleBuilder,
+} from "../shared/ripple.mjs";
 
 export const DEFAULT_MODEL = "gemma-4-26b-a4b-it";
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
@@ -61,7 +65,7 @@ export function buildPrompt({
     ? `The origin is the known node "${targetId}" (${SYSTEM_BY_ID[targetId].name}); use "${targetId}" as the origin key.`
     : "Choose the origin node yourself: name the cause, pick its area and icon.";
   const context = description ? `Context: ${clean(description, 160)}\n` : "";
-  const user = `${reference()}\n\n${start}\nTone: ${tone}\n<cause>${clean(text, 80)}</cause>\n${context}`;
+  const user = `${reference()}\n\n${start}\nTone: ${tone}\n<cause>${clean(text, MAX_CAUSE_TEXT)}</cause>\n${context}`;
   return { system: SYSTEM_PROMPT, user };
 }
 

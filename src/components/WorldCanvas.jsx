@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ReactFlow, useNodesState } from "@xyflow/react";
 import { SystemNode } from "./SystemNode.jsx";
 import { LinkEdge } from "./LinkEdge.jsx";
+import { AskBox } from "./AskBox.jsx";
 import { Jiggle } from "./Jiggle.jsx";
 import { layoutRipple } from "../lib/layout.js";
 import { EXAMPLES } from "../lib/examples.js";
@@ -16,6 +17,11 @@ const FIT = {
   maxZoom: 1,
 };
 const RECENT = 1;
+// While Gemma is working a panel sits over the top of the map, so keep the ripple below it.
+const fitOptions = (busy) => ({
+  ...FIT,
+  padding: { ...FIT.padding, top: busy ? "215px" : FIT.padding.top },
+});
 
 /** The map is drawn from whatever the ripple has reached so far. */
 export function WorldCanvas({
@@ -23,10 +29,10 @@ export function WorldCanvas({
   selectedId,
   focusedEventId,
   idle,
-  thinking,
-  prompt,
+  busy,
   onPickNode,
   onDropCause,
+  onAsk,
   onRunExample,
 }) {
   const flow = useRef(null);
@@ -106,10 +112,10 @@ export function WorldCanvas({
   useEffect(() => {
     if (!follow.current || !flow.current || !wanted.length) return undefined;
     const frame = requestAnimationFrame(() =>
-      flow.current?.fitView({ ...FIT, duration: 600 }),
+      flow.current?.fitView({ ...fitOptions(busy), duration: 600 }),
     );
     return () => cancelAnimationFrame(frame);
-  }, [wanted.length]);
+  }, [wanted.length, busy]);
 
   function handleDrop(event) {
     event.preventDefault();
@@ -136,9 +142,9 @@ export function WorldCanvas({
           <h1>
             <Jiggle>ask me anything.</Jiggle>
           </h1>
-          <p>
-            type any what-if on the left, pick a sticker, or try one of these:
-          </p>
+          <p>type any what-if. the weirder the better.</p>
+          <AskBox busy={busy} onAsk={onAsk} />
+          <p className="try">or try one of these:</p>
           <ul className="examples">
             {EXAMPLES.map((example) => (
               <li key={example}>
@@ -149,11 +155,6 @@ export function WorldCanvas({
             ))}
           </ul>
         </div>
-      )}
-      {thinking && (
-        <p className="thinking" role="status">
-          gemma is thinking about <q>{prompt}</q>…
-        </p>
       )}
       {dragging && (
         <p className="note drop-note" aria-hidden="true">
@@ -202,7 +203,7 @@ export function WorldCanvas({
           aria-label="Fit the ripple to the screen"
           onClick={() => {
             follow.current = true;
-            flow.current?.fitView({ ...FIT, duration: 300 });
+            flow.current?.fitView({ ...fitOptions(busy), duration: 300 });
           }}
         >
           fit

@@ -7,6 +7,7 @@ import { FieldNotes } from "./components/FieldNotes.jsx";
 import { JournalView } from "./components/JournalView.jsx";
 import { CompareView } from "./components/CompareView.jsx";
 import { HelpDialog } from "./components/HelpDialog.jsx";
+import { LiveThinking } from "./components/LiveThinking.jsx";
 import { useRipple } from "./hooks/useRipple.js";
 import { fetchStatus } from "./lib/rippleClient.js";
 
@@ -93,8 +94,6 @@ export default function App() {
     setNotice("Experiment pinned. Start over and try a different cause.");
   }
 
-  const thinking = busy && !originKey;
-
   return (
     <div className="page">
       <div className="noise" aria-hidden="true" />
@@ -124,16 +123,17 @@ export default function App() {
                 selectedId={selectedId}
                 focusedEventId={focusedEventId}
                 idle={run.status === "idle"}
-                thinking={thinking}
-                prompt={run.events[0]?.title}
+                busy={busy}
                 onPickNode={(id) => {
                   setPickedId(id);
                   setFocusedEventId(null);
                 }}
                 onDropCause={startRun}
+                onAsk={startRun}
                 onRunExample={runExample}
               />
             )}
+            <LiveThinking run={run} />
             {tab === "journal" && (
               <JournalView
                 visible={visible}

@@ -60,7 +60,7 @@ export function SystemNode({ data }) {
       <span id={`about-${event.id}`} className="sr-only">
         {event.title}. {event.explanation}
       </span>
-      {showTag && (
+      {showTag && !isOrigin && (
         <span className={`node-tag ${isOrigin ? "tag-source" : ""}`}>
           {isOrigin ? "it started here" : event.title}
           {!isOrigin && (

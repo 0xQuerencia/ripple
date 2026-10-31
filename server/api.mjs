@@ -1,9 +1,9 @@
 import { CAUSES, SYSTEM_BY_ID } from "../shared/world.mjs";
 import { buildDemoChain, guessOrigin } from "../shared/engine.mjs";
+import { MAX_CAUSE_TEXT } from "../shared/ripple.mjs";
 import { DEFAULT_MODEL, streamGemma } from "./gemma.mjs";
 
 const MAX_BODY_BYTES = 4096;
-const MAX_TEXT = 80;
 const NOTICE_NO_KEY =
   "No Gemini API key is configured, so this ripple uses the offline demo engine.";
 const NOTICE_FAILED =
@@ -55,10 +55,10 @@ function parseRippleRequest(body) {
       targetId: preset.target,
     };
   const text = typeof body.text === "string" ? body.text.trim() : "";
-  if (!text || text.length > MAX_TEXT)
+  if (!text || text.length > MAX_CAUSE_TEXT)
     throw new HttpError(
       400,
-      `Describe your cause in 1 to ${MAX_TEXT} characters.`,
+      `Describe your cause in 1 to ${MAX_CAUSE_TEXT} characters.`,
     );
   // A custom cause may name a starting system, but normally Gemma decides where it begins.
   if (body.targetId != null && !SYSTEM_BY_ID[body.targetId])

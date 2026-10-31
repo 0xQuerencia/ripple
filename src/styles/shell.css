@@ -273,3 +273,6 @@
     bottom: 16px;
   }
 }
+
+/* Without this the single column grows to fit its content and the frame spills past the screen on phones. */
+.board { grid-template-columns: minmax(0, 1fr); }

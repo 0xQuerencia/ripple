@@ -24,7 +24,7 @@ Shown live on a laptop or projector at a hackathon booth or on a call, usually i
 - Gemma invents the nodes, links, areas and icons for each ripple, within fixed limits (5 rounds, 7 per round, 28 nodes). `shared/ripple.mjs` enforces the structure and bounds every field. The server cannot verify facts, so every effect is presented as a possibility and the interface says Gemma can be wrong.
 - A known baseline of 56 systems and 235 links (`shared/world.mjs`) gives preset causes a consistent look and powers the offline demo fallback, which says it is not Gemma.
 - Harmful requests are refused by Gemma and shown as a friendly message.
-- Custom what-if text is limited to 80 characters. Requests are rate limited and the request body is capped.
+- Custom what-if text is limited to 160 characters. Requests are rate limited and the request body is capped.
 
 ## Brand Commitments
 Name: "ripple!" with the tagline "little causes, big consequences." The user redirected the look to the soft pixel-handwriting style of jamegam.hackclub.com (near-white page, pixel handwriting font, chunky pixel doodles with dark outlines, salmon handwritten annotations, rainbow haze, grain). Inspired by, not copied from, that site; no artwork or code is reused, and the project is not affiliated with Hack Club. The earlier "elevated scrapbook" direction is superseded.

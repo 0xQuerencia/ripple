@@ -217,3 +217,12 @@
   text-align: right;
   color: var(--ink-2);
 }
+
+.subject-head > div {
+  min-width: 0;
+}
+.subject-head h2 {
+  font-size: 34px;
+  overflow-wrap: anywhere;
+  line-height: 1;
+}

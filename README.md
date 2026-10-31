@@ -3,15 +3,16 @@
 **Little causes, big consequences.** Drop a cause onto a map of 12 connected systems and watch **Gemma 4** reason about how it could spread, one link at a time.
 
 ![Ripple, ready to play](artifacts/world-desktop.png)
-![A ripple spreading, reasoned by Gemma 4](artifacts/ripple-desktop.png)
+![Gemma thinking live: a timer, the round, and each effect as it is written](artifacts/thinking-desktop.png)
+![The finished ripple, with the big picture of what it touched](artifacts/ripple-desktop.png)
 
 Built for MLH: **Best Use of Gemma 4** (Gemini API) and **Best Open-Source AI Project** (MIT licensed).
 
 ## How it works
 
-1. You ask any what-if: type your own ("the moon disappears", "hackers die"), pick a sticker, or tap an example.
+1. You ask any what-if (up to 160 characters): the big box in the middle of the empty map is focused as soon as the page loads, so you can just start typing and press Enter. Or pick a sticker, or tap an example.
 2. The server asks Gemma 4 (`gemma-4-26b-a4b-it` by default) to draw the ripple. Gemma invents the map for that question: a node for the cause, then up to 28 effects over 5 rounds, each with a name, an area of life, a pixel icon, who feels it, how soon, how sure it is, how big, and which earlier nodes it follows from.
-3. The answer is streamed line by line, so the map grows on screen while Gemma is still writing. The first effect shows after about 3 seconds; a big ripple takes 30 to 40.
+3. The answer is streamed line by line, so the map grows on screen while Gemma is still writing, with a live panel showing a timer, the current round, how many things it has found, and each effect as it appears. The first effect shows after about 3 seconds; a big ripple takes 30 to 40.
 4. **Every line is validated before you see it** (`createRippleBuilder` in `shared/ripple.mjs`): an effect must follow from a node that already exists in an earlier round, no node appears twice, rounds do not skip, the ripple stays within its size limits, and every text field and choice (area, icon, timeframe, certainty, severity) is length-bounded or checked against a fixed list. This guarantees the map is well-formed and traceable. **It cannot check the facts**, so everything is shown as a possibility, the notes say Gemma can be wrong, and harmful requests are refused.
 5. Tap any node to see who feels it and how soon, trace how the ripple got there, or read the "big picture" of which areas of life it reached.
 6. If there is no API key or Gemma is unreachable, the server retries (and tries the larger Gemma on the last attempt), then falls back to a fixed offline demo over a small known map **and says so** in the interface.
