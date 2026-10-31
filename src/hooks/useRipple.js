@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { ApiError, streamRipple } from "../lib/rippleClient.js";
+import { guessOrigin } from "../../shared/engine.mjs";
 
 const REVEAL_GAP_MS = 750;
 const REPLAY_GAP_MS = 850;
@@ -19,7 +20,7 @@ const IDLE = {
   replaying: false,
 };
 
-/** Link each effect to the earlier event that put the ripple on its source system. */
+/** Link each effect to the earlier event that created the node it follows from. */
 function withParent(events, effect, id) {
   const parent = [...events]
     .reverse()
@@ -30,15 +31,22 @@ function withParent(events, effect, id) {
 function reducer(state, action) {
   switch (action.type) {
     case "begin": {
-      const { runId, origin } = action;
+      const { runId, cause } = action;
+      // The cause is on the board straight away; Gemma says where it belongs a moment later.
       const first = {
         id: `${runId}-0`,
         parentEventId: null,
         sourceId: null,
-        targetId: origin.targetId,
-        title: origin.title,
-        explanation: origin.description,
+        targetId: cause.target ?? null,
         round: 0,
+        name: cause.title,
+        area: "society",
+        icon: "sparkle",
+        known: false,
+        title: cause.title,
+        explanation: cause.description ?? "",
+        who: "",
+        alsoFrom: [],
       };
       return {
         ...IDLE,
@@ -50,16 +58,22 @@ function reducer(state, action) {
     }
     case "start": {
       const [first, ...rest] = state.events;
-      const origin = {
+      const { origin } = action;
+      const placed = {
         ...first,
-        explanation: action.origin?.description || first.explanation,
+        targetId: origin.targetId,
+        name: origin.name,
+        area: origin.area,
+        icon: origin.icon,
+        known: origin.known,
+        explanation: origin.description || first.explanation,
       };
       return {
         ...state,
         mode: action.mode,
         model: action.model ?? null,
         notice: action.notice ?? "",
-        events: [origin, ...rest],
+        events: [placed, ...rest],
       };
     }
     case "effect": {
@@ -135,26 +149,18 @@ export function useRipple({ onProblem }) {
   }, []);
 
   const begin = useCallback(
-    async ({ cause, targetId }) => {
+    async ({ cause }) => {
       clearRun();
       const controller = new AbortController();
       abort.current = controller;
       const runId = crypto.randomUUID();
-      dispatch({
-        type: "begin",
-        runId,
-        origin: {
-          targetId,
-          title: cause.title,
-          description: cause.description,
-        },
-      });
+      dispatch({ type: "begin", runId, cause });
 
       const api = cause.id
-        ? { causeId: cause.id, targetId }
-        : { text: cause.title, tone: cause.tone, targetId };
+        ? { causeId: cause.id }
+        : { text: cause.title, tone: cause.tone };
       const local = {
-        targetId,
+        targetId: cause.target ?? guessOrigin(cause.title),
         text: cause.title,
         description: cause.description,
         tone: cause.tone,
@@ -165,6 +171,12 @@ export function useRipple({ onProblem }) {
           {
             signal: controller.signal,
             onEvent: (event) => {
+              if (event.type === "refused") {
+                clearRun();
+                dispatch({ type: "reset" });
+                onProblem(event.message);
+                return;
+              }
               queue.current.push(event);
               drain();
             },

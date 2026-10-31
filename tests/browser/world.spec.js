@@ -1,38 +1,53 @@
 import { test, expect } from "@playwright/test";
+import { CAUSES, SYSTEM_BY_ID } from "../../shared/world.mjs";
+import { createScenario, getAncestry } from "../../shared/scenario.mjs";
 
 const steps = (page) => page.getByTestId("story-step");
+const nodes = (page) => page.locator(".system-node");
 const inspect = (page, name) =>
   page.getByRole("button", { name: `Inspect ${name}`, exact: true });
 
+const blackout = CAUSES.find((c) => c.id === "blackout");
+const expected = createScenario(blackout, blackout.target, "expected");
+const nameOf = (event) => SYSTEM_BY_ID[event.targetId].name;
+
 async function settled(page) {
-  // Effects are revealed one at a time (about 750ms apart), so allow for the whole ripple.
+  // Effects are revealed one at a time unless reduced motion is on, so allow for a whole ripple.
   await expect(page.locator(".playback-status")).toContainText(
     "possible effect",
-    { timeout: 15_000 },
+    { timeout: 30_000 },
   );
 }
-async function blackout(page) {
-  await page.getByTestId("cause-blackout").click();
-  await inspect(page, "energy").click();
+async function reduceMotion(page) {
+  await page.emulateMedia({ reducedMotion: "reduce" });
 }
 
-test("the world has all systems and only compatible causes run", async ({
+test("the empty map invites any question, and an example starts a ripple", async ({
   page,
 }) => {
+  await reduceMotion(page);
   await page.goto("/");
-  await expect(page.locator(".system-node")).toHaveCount(12);
-  await expect(page.locator(".react-flow__edge")).toHaveCount(26);
-  await page.getByTestId("cause-blackout").click();
-  await inspect(page, "nature").click();
-  await expect(steps(page)).toHaveCount(0);
-  await expect(page.locator(".toast")).toContainText("onto energy");
+  await expect(
+    page.getByRole("heading", { name: "ask me anything." }),
+  ).toBeVisible();
+  await expect(page.locator(".examples button")).toHaveCount(8);
+  await expect(nodes(page)).toHaveCount(0);
+  await page.getByRole("button", { name: "hackers die" }).click();
+  await settled(page);
+  expect(await nodes(page).count()).toBeGreaterThan(4);
+  // every node after the first hangs off an earlier one
+  await expect(page.locator(".react-flow__edge")).toHaveCount(
+    (await nodes(page).count()) - 1,
+  );
+  await expect(page.locator(".picture")).toContainText("areas of life");
 });
 
 test("playback steps, rewinds, traces ancestry, and resets", async ({
   page,
 }) => {
+  await reduceMotion(page);
   await page.goto("/");
-  await blackout(page);
+  await page.getByTestId("cause-blackout").click();
   await settled(page);
   const slider = page.getByRole("slider", { name: "Scrub through the ripple" });
   await slider.fill("1");
@@ -41,26 +56,23 @@ test("playback steps, rewinds, traces ancestry, and resets", async ({
   await expect(steps(page)).toHaveCount(2);
   await slider.fill("0");
   await expect(steps(page)).toHaveCount(0);
-  await slider.fill("8");
-  await expect(steps(page)).toHaveCount(8);
+  await slider.fill(String(expected.length));
+  await expect(steps(page)).toHaveCount(expected.length);
   await steps(page).last().click();
-  await expect(page.getByTestId("ancestry").locator("li")).toHaveText([
-    "energy",
-    "transport",
-    "industry",
-    "economy",
-  ]);
+  await expect(page.getByTestId("ancestry").locator("li")).toHaveText(
+    getAncestry(expected, expected.at(-1).id).map(nameOf),
+  );
   await page.getByRole("button", { name: "start over" }).click();
   await expect(steps(page)).toHaveCount(0);
-  await expect(page.locator(".system-node.is-affected")).toHaveCount(0);
+  await expect(nodes(page)).toHaveCount(0);
 });
 
 test("pinned experiments survive reset and can be compared", async ({
   page,
 }) => {
-  await page.emulateMedia({ reducedMotion: "reduce" });
+  await reduceMotion(page);
   await page.goto("/");
-  await blackout(page);
+  await page.getByTestId("cause-blackout").click();
   await settled(page);
   await page.getByRole("button", { name: "compare", exact: true }).click();
   await page.getByRole("button", { name: "pin this one" }).click();
@@ -71,7 +83,6 @@ test("pinned experiments survive reset and can be compared", async ({
   );
   await page.getByRole("button", { name: "the world", exact: true }).click();
   await page.getByTestId("cause-discovery").click();
-  await inspect(page, "industry").click();
   await settled(page);
   await page.getByRole("button", { name: "compare", exact: true }).click();
   await expect(page.getByTestId("sheet").last()).toContainText("new invention");
@@ -83,17 +94,22 @@ test("keyboard, mobile sizing, custom causes, and help work", async ({
 }) => {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.emulateMedia({ reducedMotion: "reduce" });
+  await reduceMotion(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await inspect(page, "water").focus();
-  await page.keyboard.press("Enter");
-  await expect(page.getByTestId("subject-name")).toHaveText("water");
   await page
     .getByRole("textbox", { name: "Your own cause" })
     .fill("a rainy weekend");
-  await page.getByRole("button", { name: "try it on water" }).click();
+  await page.getByRole("button", { name: "see what happens" }).click();
+  await settled(page);
   await expect(steps(page).first()).toContainText("a rainy weekend");
+  // keyboard: focus a node and press Enter to read its notes
+  const second = expected.length > 1 ? nameOf(expected[1]) : "";
+  expect(second).not.toBe("");
+  const target = page.locator(".system-node .node-face").nth(1);
+  await target.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByTestId("subject-name")).not.toHaveText("");
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -106,10 +122,10 @@ test("keyboard, mobile sizing, custom causes, and help work", async ({
   expect(errors).toEqual([]);
 });
 
-test("cause stickers support drag and drop", async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: "reduce" });
+test("cause stickers can be dropped onto the map", async ({ page }) => {
+  await reduceMotion(page);
   await page.goto("/");
-  await page.getByTestId("cause-blackout").dragTo(inspect(page, "energy"));
+  await page.getByTestId("cause-blackout").dragTo(page.locator(".canvas"));
   await settled(page);
-  await expect(steps(page)).toHaveCount(8);
+  await expect(steps(page)).toHaveCount(expected.length);
 });

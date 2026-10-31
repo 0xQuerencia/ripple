@@ -1,5 +1,4 @@
 import { Sprite } from "../art/Sprite.jsx";
-import { SYSTEM_BY_ID } from "../../shared/world.mjs";
 
 function Sheet({ label, run, tilt }) {
   const touched = run ? new Set(run.events.map((e) => e.targetId)).size : 0;
@@ -21,8 +20,8 @@ function Sheet({ label, run, tilt }) {
             <ul>
               {run.events.map((e) => (
                 <li key={e.id}>
-                  <Sprite id={e.targetId} scale={1} />
-                  {SYSTEM_BY_ID[e.targetId].name}: {e.title}
+                  <Sprite id={e.icon} scale={1} />
+                  {e.name}: {e.title}
                 </li>
               ))}
             </ul>

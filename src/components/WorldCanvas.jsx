@@ -1,164 +1,186 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ReactFlow, useNodesState } from "@xyflow/react";
 import { SystemNode } from "./SystemNode.jsx";
 import { LinkEdge } from "./LinkEdge.jsx";
-import { Sprite } from "../art/Sprite.jsx";
-import {
-  SYSTEMS,
-  SYSTEM_BY_ID,
-  EDGE_LIST,
-  CAUSES,
-} from "../../shared/world.mjs";
+import { Jiggle } from "./Jiggle.jsx";
+import { layoutRipple } from "../lib/layout.js";
+import { EXAMPLES } from "../lib/examples.js";
+import { CAUSES } from "../../shared/world.mjs";
 import { getAncestry } from "../../shared/scenario.mjs";
 
 const NODE_TYPES = { system: SystemNode };
 const EDGE_TYPES = { link: LinkEdge };
+const NODE = { width: 124, height: 112 };
 const FIT = {
-  padding: { top: "112px", right: "48px", bottom: "96px", left: "48px" },
+  padding: { top: "96px", right: "64px", bottom: "72px", left: "64px" },
+  maxZoom: 1,
 };
-const initialNodes = () =>
-  SYSTEMS.map((s) => ({
-    id: s.id,
-    type: "system",
-    position: { x: s.x, y: s.y },
-    width: 132,
-    height: 124,
-    data: {},
-  }));
+const RECENT = 1;
 
-function linkState(edge, { visible, trail, selectedId, hasFocus }) {
-  const hit = visible.some(
-    (e) => e.sourceId === edge.source && e.targetId === edge.target,
-  );
-  if (
-    trail.some((e) => e.sourceId === edge.source && e.targetId === edge.target)
-  )
-    return "path";
-  if (hasFocus) return "dim";
-  if (hit) return "active";
-  return edge.source === selectedId || edge.target === selectedId
-    ? "near"
-    : "quiet";
-}
-
+/** The map is drawn from whatever the ripple has reached so far. */
 export function WorldCanvas({
   visible,
   selectedId,
   focusedEventId,
-  armed,
   idle,
-  onPickSystem,
+  thinking,
+  prompt,
+  onPickNode,
   onDropCause,
-  onNotice,
+  onRunExample,
 }) {
-  const [nodes, , onNodesChange] = useNodesState(initialNodes());
-  const [dropId, setDropId] = useState(null);
   const flow = useRef(null);
+  const follow = useRef(true);
+  const [dragging, setDragging] = useState(false);
 
+  const spots = useMemo(() => layoutRipple(visible), [visible]);
+  const placed = useMemo(
+    () => visible.filter((e) => e.targetId && spots.has(e.targetId)),
+    [visible, spots],
+  );
   const trail = useMemo(
     () => (focusedEventId ? getAncestry(visible, focusedEventId) : []),
     [visible, focusedEventId],
   );
-  const sourceId = visible[0]?.targetId;
-  const effectByTarget = useMemo(
-    () => new Map(visible.slice(1).map((e) => [e.targetId, e])),
-    [visible],
-  );
 
-  const shownNodes = nodes.map((node) => {
-    const effect = effectByTarget.get(node.id);
-    return {
-      ...node,
-      data: {
-        system: SYSTEM_BY_ID[node.id],
-        status: node.id === sourceId ? "source" : effect ? "affected" : "quiet",
-        effect,
-        isSelected: node.id === selectedId,
-        isDropTarget: node.id === dropId,
-        isArmedTarget: armed?.target === node.id,
-      },
-    };
-  });
-
-  const edges = useMemo(
-    () =>
-      EDGE_LIST.map((edge) => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        type: "link",
+  const wanted = useMemo(() => {
+    const recent = new Set(placed.slice(-RECENT).map((e) => e.targetId));
+    const onTrail = new Set(trail.map((e) => e.targetId));
+    return placed.map((event) => {
+      const spot = spots.get(event.targetId);
+      return {
+        id: event.targetId,
+        type: "system",
+        position: { x: spot.x - NODE.width / 2, y: spot.y - NODE.height / 2 },
+        ...NODE,
+        draggable: false,
         data: {
-          state: linkState(edge, {
-            visible,
-            trail,
-            selectedId,
-            hasFocus: trail.length > 0,
-          }),
+          event,
+          isSelected: event.targetId === selectedId,
+          showTag:
+            recent.has(event.targetId) ||
+            event.targetId === selectedId ||
+            onTrail.has(event.targetId),
         },
-      })),
-    [visible, trail, selectedId],
-  );
+      };
+    });
+  }, [placed, spots, selectedId, trail]);
 
-  function nodeIdAt(event) {
-    return event.target.closest?.(".react-flow__node")?.dataset.id ?? null;
-  }
+  // React Flow measures each node and needs those measurements back, or it cannot place any edge.
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  useEffect(() => {
+    setNodes((current) => {
+      const measured = new Map(current.map((n) => [n.id, n.measured]));
+      return wanted.map((n) => ({ ...n, measured: measured.get(n.id) }));
+    });
+  }, [wanted, setNodes]);
 
-  function handleDragOver(event) {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "copy";
-    const id = nodeIdAt(event);
-    if (id !== dropId) setDropId(id);
-  }
+  const edges = useMemo(() => {
+    const keys = new Set(placed.map((e) => e.targetId));
+    const onPath = new Set(trail.map((e) => `${e.sourceId}>${e.targetId}`));
+    return placed.slice(1).flatMap((event) =>
+      [event.sourceId, ...(event.alsoFrom ?? [])]
+        .filter((source) => keys.has(source))
+        .map((source, i) => ({
+          id: `${source}>${event.targetId}`,
+          source,
+          target: event.targetId,
+          type: "link",
+          data: {
+            state: trail.length
+              ? onPath.has(`${source}>${event.targetId}`)
+                ? "path"
+                : "dim"
+              : "active",
+            extra: i > 0,
+          },
+        })),
+    );
+  }, [placed, trail]);
+
+  // The camera follows the ripple as it grows, until the visitor takes over.
+  const first = visible[0]?.id;
+  useEffect(() => {
+    follow.current = true;
+  }, [first]);
+  useEffect(() => {
+    if (!follow.current || !flow.current || !wanted.length) return undefined;
+    const frame = requestAnimationFrame(() =>
+      flow.current?.fitView({ ...FIT, duration: 600 }),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [wanted.length]);
 
   function handleDrop(event) {
     event.preventDefault();
-    setDropId(null);
+    setDragging(false);
     const cause = CAUSES.find(
       (c) => c.id === event.dataTransfer.getData("application/x-ripple-cause"),
     );
-    const id = nodeIdAt(event);
-    if (!cause) return;
-    if (id) onDropCause(cause, id);
-    else onNotice("Drop the sticker right onto a system.");
+    if (cause) onDropCause(cause);
   }
 
   return (
     <div
-      className={`canvas ${armed ? "is-armed" : ""} ${idle ? "is-idle" : ""}`}
-      onDragOver={handleDragOver}
-      onDragLeave={() => setDropId(null)}
+      className={`canvas ${idle ? "is-idle" : ""} ${dragging ? "is-drop-ready" : ""}`}
+      onDragOver={(event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "copy";
+        setDragging(true);
+      }}
+      onDragLeave={() => setDragging(false)}
       onDrop={handleDrop}
     >
       {idle && (
-        <p className="note invite" aria-hidden="true">
-          <Sprite id="arrow-curl" scale={1} className="flip" />
-          everything is connected. even the small things.
+        <div className="invite">
+          <h1>
+            <Jiggle>ask me anything.</Jiggle>
+          </h1>
+          <p>
+            type any what-if on the left, pick a sticker, or try one of these:
+          </p>
+          <ul className="examples">
+            {EXAMPLES.map((example) => (
+              <li key={example}>
+                <button type="button" onClick={() => onRunExample(example)}>
+                  {example}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {thinking && (
+        <p className="thinking" role="status">
+          gemma is thinking about <q>{prompt}</q>…
         </p>
       )}
-      {armed && (
-        <p className="note armed-note" role="status">
-          now tap the thing where “{armed.title}” begins!
+      {dragging && (
+        <p className="note drop-note" aria-hidden="true">
+          drop it anywhere to start!
         </p>
       )}
       <ReactFlow
-        nodes={shownNodes}
+        nodes={nodes}
+        onNodesChange={onNodesChange}
         edges={edges}
         nodeTypes={NODE_TYPES}
         edgeTypes={EDGE_TYPES}
-        onNodesChange={onNodesChange}
         onInit={(instance) => {
           flow.current = instance;
         }}
-        fitView
-        fitViewOptions={FIT}
-        minZoom={0.35}
+        minZoom={0.15}
         maxZoom={1.6}
+        nodesDraggable={false}
         nodesConnectable={false}
         nodesFocusable={false}
         edgesFocusable={false}
         elementsSelectable={false}
         deleteKeyCode={null}
-        onNodeClick={(_, node) => onPickSystem(node.id)}
+        onMoveStart={(event) => {
+          if (event) follow.current = false;
+        }}
+        onNodeClick={(_, node) => onPickNode(node.id)}
       />
       <div className="zoom" role="group" aria-label="Zoom">
         <button
@@ -177,8 +199,11 @@ export function WorldCanvas({
         </button>
         <button
           type="button"
-          aria-label="Fit the world to the screen"
-          onClick={() => flow.current?.fitView({ ...FIT, duration: 300 })}
+          aria-label="Fit the ripple to the screen"
+          onClick={() => {
+            follow.current = true;
+            flow.current?.fitView({ ...FIT, duration: 300 });
+          }}
         >
           fit
         </button>
@@ -186,15 +211,16 @@ export function WorldCanvas({
       {!idle && (
         <ul className="legend" aria-label="Map key">
           <li>
-            <i className="key-line" />
-            possible link
+            <i className="key-line is-lit" />
+            follows from
           </li>
           <li>
-            <i className="key-line is-lit" />a ripple in motion
+            <i className="key-line is-extra" />
+            also feeds
           </li>
           <li>
             <i className="key-ring" />
-            reached
+            big impact
           </li>
         </ul>
       )}

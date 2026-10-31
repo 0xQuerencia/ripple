@@ -9,14 +9,17 @@ import { CompareView } from "./components/CompareView.jsx";
 import { HelpDialog } from "./components/HelpDialog.jsx";
 import { useRipple } from "./hooks/useRipple.js";
 import { fetchStatus } from "./lib/rippleClient.js";
-import { SYSTEM_BY_ID } from "../shared/world.mjs";
 
 const NOTICE_MS = 5000;
+const FRAME_LABEL = {
+  world: "the world",
+  journal: "the journal",
+  compare: "compare",
+};
 
 export default function App() {
   const [tab, setTab] = useState("world");
-  const [selectedId, setSelectedId] = useState("power");
-  const [armed, setArmed] = useState(null);
+  const [pickedId, setPickedId] = useState(null);
   const [focusedEventId, setFocusedEventId] = useState(null);
   const [engine, setEngine] = useState(null);
   const [pinned, setPinned] = useState(null);
@@ -33,6 +36,8 @@ export default function App() {
   } = useRipple({ onProblem: setNotice });
   const visible = run.events.slice(0, run.cursor);
   const busy = run.status === "streaming";
+  const originKey = run.events[0]?.targetId ?? null;
+  const selectedId = pickedId ?? originKey;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -53,65 +58,42 @@ export default function App() {
   }, [run.notice]);
 
   const startRun = useCallback(
-    (cause, targetId) => {
-      setSelectedId(targetId);
-      setArmed(null);
+    (cause) => {
+      setPickedId(null);
       setFocusedEventId(null);
       setTab("world");
-      begin({ cause, targetId });
+      begin({ cause });
     },
     [begin],
   );
 
-  /** A preset cause only makes sense where it begins; custom what-ifs may start anywhere. */
-  function tryPlace(cause, targetId) {
-    setSelectedId(targetId);
-    if (cause.target && cause.target !== targetId) {
-      setNotice(
-        `Try dropping ${cause.title} onto ${SYSTEM_BY_ID[cause.target].name}.`,
-      );
-      return;
-    }
-    startRun(cause, targetId);
-  }
-
-  function handlePickSystem(id) {
-    setFocusedEventId(null);
-    if (armed) tryPlace(armed, id);
-    else setSelectedId(id);
-  }
-
-  function handleArm(cause) {
-    setArmed(cause);
-    if (cause) setNotice(`Now tap the system where “${cause.title}” begins.`);
-  }
+  const runExample = (title) =>
+    startRun({ id: null, title, description: "", tone: "negative" });
 
   function handleDragCause(event, cause) {
     event.dataTransfer.setData("application/x-ripple-cause", cause.id);
     event.dataTransfer.effectAllowed = "copy";
-    setArmed(null);
   }
 
   function handleInspect(event) {
-    setSelectedId(event.targetId);
+    setPickedId(event.targetId);
     setFocusedEventId(event.id);
     scrub(Math.max(run.cursor, run.events.indexOf(event) + 1));
   }
 
   function handleReset() {
     reset();
-    setArmed(null);
+    setPickedId(null);
     setFocusedEventId(null);
-    setNotice("A fresh little world. What will you try next?");
+    setNotice("A fresh little world. What will you ask next?");
   }
 
   function handlePin() {
     setPinned(run);
-    setNotice("Experiment pinned. Reset and try a different cause.");
+    setNotice("Experiment pinned. Start over and try a different cause.");
   }
 
-  const system = SYSTEM_BY_ID[selectedId];
-  const showWorld = tab === "world";
+  const thinking = busy && !originKey;
 
   return (
     <div className="page">
@@ -127,35 +109,29 @@ export default function App() {
         onHelp={() => setHelpOpen(true)}
       />
       <main className="stage">
-        <CauseTray
-          armedId={armed?.id ?? null}
-          selectedSystem={system}
-          busy={busy}
-          onArm={handleArm}
-          onDragCause={handleDragCause}
-          onCustom={(cause) => startRun(cause, selectedId)}
-        />
-        <section className="board" aria-label={showWorld ? "The world" : tab}>
+        <CauseTray busy={busy} onRun={startRun} onDragCause={handleDragCause} />
+        <section
+          className="board"
+          aria-label={tab === "world" ? "The world" : tab}
+        >
           <div className={`frame ${run.status === "idle" ? "" : "is-rainbow"}`}>
             <span className="frame-label" aria-hidden="true">
-              {
-                {
-                  world: "the world",
-                  journal: "the journal",
-                  compare: "compare",
-                }[tab]
-              }
+              {FRAME_LABEL[tab]}
             </span>
-            {showWorld && (
+            {tab === "world" && (
               <WorldCanvas
                 visible={visible}
                 selectedId={selectedId}
                 focusedEventId={focusedEventId}
-                armed={armed}
                 idle={run.status === "idle"}
-                onPickSystem={handlePickSystem}
-                onDropCause={tryPlace}
-                onNotice={setNotice}
+                thinking={thinking}
+                prompt={run.events[0]?.title}
+                onPickNode={(id) => {
+                  setPickedId(id);
+                  setFocusedEventId(null);
+                }}
+                onDropCause={startRun}
+                onRunExample={runExample}
               />
             )}
             {tab === "journal" && (
@@ -183,9 +159,9 @@ export default function App() {
           />
         </section>
         <FieldNotes
-          system={system}
           visible={visible}
           run={run}
+          selectedId={selectedId}
           focusedEventId={focusedEventId}
           onInspect={handleInspect}
         />

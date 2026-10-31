@@ -1,5 +1,4 @@
 import { Sprite } from "../art/Sprite.jsx";
-import { SYSTEM_BY_ID } from "../../shared/world.mjs";
 import { CERTAINTY_TEXT } from "./FieldNotes.jsx";
 
 export function JournalView({ visible, onOpen }) {
@@ -24,14 +23,15 @@ export function JournalView({ visible, onOpen }) {
             className="journal-entry"
             onClick={() => onOpen(event)}
           >
-            <Sprite id={event.targetId} scale={2} />
+            <Sprite id={event.icon} scale={2} />
             <span>
               <span className="step-title">{event.title}</span>
               <span className="step-meta">
                 {index === 0
                   ? "the first domino"
-                  : `round ${event.round}, ${CERTAINTY_TEXT[event.certainty] ?? "possible"}`}
-                , {SYSTEM_BY_ID[event.targetId].name}
+                  : `round ${event.round}, ${CERTAINTY_TEXT[event.certainty] ?? "possible"}, ${event.timeframe}`}
+                , {event.name}
+                {event.who && `, felt by ${event.who}`}
               </span>
               <span className="journal-text">{event.explanation}</span>
             </span>

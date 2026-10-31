@@ -180,3 +180,40 @@
   text-decoration-thickness: 3px;
   text-underline-offset: 3px;
 }
+
+.picture {
+  display: grid;
+  gap: 10px;
+}
+.picture h3 {
+  font-size: 26px;
+}
+.picture-line {
+  line-height: 1.2;
+}
+.areas {
+  display: grid;
+  gap: 7px;
+}
+.areas li {
+  display: grid;
+  grid-template-columns: 8.5rem 1fr 2.2ch;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--t-small);
+}
+.area-name {
+  line-height: 1.05;
+}
+.area-bar {
+  display: block;
+  width: var(--w);
+  min-width: 6px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--c);
+}
+.area-count {
+  text-align: right;
+  color: var(--ink-2);
+}

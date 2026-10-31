@@ -1,5 +1,6 @@
 import { Handle, Position } from "@xyflow/react";
 import { Sprite } from "../art/Sprite.jsx";
+import { DOMAIN_BY_ID } from "../../shared/world.mjs";
 
 const CENTER = {
   top: "50%",
@@ -18,19 +19,16 @@ const CERTAINTY_LABEL = {
   speculative: "a long shot",
 };
 
-/** One system on the map: a pixel doodle with its name, a ring when the ripple reaches it, and a note. */
+/** One thing the ripple touched: a pixel picture, its name, a ring when it matters, and a note. */
 export function SystemNode({ data }) {
-  const { system, status, effect, isSelected, isDropTarget, isArmedTarget } =
-    data;
-  const state =
-    status === "source"
-      ? "is-source"
-      : status === "affected"
-        ? `is-affected sev-${effect.severity}`
-        : "";
+  const { event, isSelected, showTag } = data;
+  const isOrigin = event.round === 0;
+  const state = isOrigin ? "is-source" : `is-affected sev-${event.severity}`;
+  const color = DOMAIN_BY_ID[event.area]?.color ?? "#c4bdc2";
   return (
     <div
-      className={`system-node ${state} ${isSelected ? "is-selected" : ""} ${isDropTarget ? "is-drop" : ""} ${isArmedTarget ? "is-hint" : ""}`}
+      className={`system-node ${state} ${isSelected ? "is-selected" : ""}`}
+      style={{ "--area": color }}
     >
       <Handle
         type="target"
@@ -48,31 +46,29 @@ export function SystemNode({ data }) {
       <button
         type="button"
         className="node-face"
-        aria-pressed={isSelected}
-        aria-label={`Inspect ${system.name}`}
-        aria-describedby={`about-${system.id}`}
+        aria-label={`Inspect ${event.name}`}
+        aria-describedby={`about-${event.id}`}
       >
-        <Sprite id={system.id} scale={2} />
-        <span className="node-name">{system.name}</span>
-        {status === "affected" && effect.severity === "high" && (
+        <Sprite id={event.icon} scale={2} />
+        <span className="node-name">{event.name}</span>
+        {!isOrigin && event.severity === "high" && (
           <span className="node-flag" aria-hidden="true">
             !
           </span>
         )}
       </button>
-      <span id={`about-${system.id}`} className="sr-only">
-        {system.description}
-        {status === "affected" ? ` Possibly affected: ${effect.title}.` : ""}
+      <span id={`about-${event.id}`} className="sr-only">
+        {event.title}. {event.explanation}
       </span>
-      {status === "source" && (
-        <span className="node-tag tag-source">it started here</span>
-      )}
-      {status === "affected" && (
-        <span className="node-tag">
-          {effect.title}
-          <span className="tag-certainty">
-            {CERTAINTY_LABEL[effect.certainty] ?? effect.certainty}
-          </span>
+      {showTag && (
+        <span className={`node-tag ${isOrigin ? "tag-source" : ""}`}>
+          {isOrigin ? "it started here" : event.title}
+          {!isOrigin && (
+            <span className="tag-certainty">
+              {CERTAINTY_LABEL[event.certainty] ?? event.certainty},{" "}
+              {event.timeframe}
+            </span>
+          )}
         </span>
       )}
     </div>

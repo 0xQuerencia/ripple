@@ -321,3 +321,123 @@
     transform: rotate(3deg);
   }
 }
+
+/* ---- open-ended map ---- */
+.system-node {
+  width: 124px;
+}
+.node-face {
+  padding: 6px 0 2px;
+}
+.node-ring {
+  top: 4px;
+  width: 100px;
+  height: 100px;
+  margin-left: -50px;
+}
+.node-name {
+  max-width: 124px;
+  text-align: center;
+  overflow-wrap: anywhere;
+  text-decoration-color: var(--area, transparent);
+  text-decoration-thickness: 4px;
+  text-wrap: balance;
+}
+.system-node.is-selected .node-name {
+  text-decoration: underline wavy var(--accent);
+  text-decoration-thickness: 3px;
+}
+.link-extra .link-base {
+  stroke-dasharray: 5 6;
+}
+.link-extra .link-ink {
+  stroke-width: 3;
+  stroke-opacity: 0.55;
+}
+.link-extra .link-arrow {
+  stroke-width: 2.5;
+}
+.key-line.is-extra {
+  border-top: 3px dashed var(--accent);
+}
+
+.invite {
+  inset: 0;
+  top: 0;
+  left: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 14px;
+  max-width: none;
+  padding: 24px 28px 60px;
+  text-align: center;
+  transform: none;
+  pointer-events: none;
+}
+.invite h1 {
+  font-size: 56px;
+  line-height: 1;
+}
+.invite p {
+  max-width: 36ch;
+  color: var(--ink-2);
+}
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 12px;
+  max-width: 580px;
+  margin-top: 4px;
+  pointer-events: auto;
+}
+.examples button {
+  padding: 4px 12px 7px;
+  border: 3px solid var(--line);
+  border-radius: 3px;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: var(--t-small);
+  line-height: 1.05;
+  transition:
+    transform 140ms steps(3, end),
+    border-color 140ms steps(2, end);
+}
+.examples button:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px) rotate(-1.5deg);
+}
+
+.thinking {
+  position: absolute;
+  z-index: 5;
+  top: 18px;
+  left: 50%;
+  translate: -50% 0;
+  max-width: calc(100% - 32px);
+  padding: 8px 16px 10px;
+  border-radius: 4px;
+  background: var(--btn);
+  color: var(--bg);
+  text-align: center;
+  line-height: 1.1;
+  animation: pop-in 360ms steps(4, end) both;
+}
+.thinking q {
+  quotes: none;
+  color: #f0cdca;
+}
+.drop-note {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  max-width: none;
+  font-size: 30px;
+}
+.canvas.is-drop-ready {
+  outline: 4px dashed var(--accent);
+  outline-offset: -12px;
+}

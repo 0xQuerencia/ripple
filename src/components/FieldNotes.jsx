@@ -1,7 +1,8 @@
 import { Sprite } from "../art/Sprite.jsx";
 import { Jiggle } from "./Jiggle.jsx";
-import { SYSTEM_BY_ID, EDGE_LIST } from "../../shared/world.mjs";
+import { DOMAIN_BY_ID } from "../../shared/world.mjs";
 import { getAncestry } from "../../shared/scenario.mjs";
+import { summarize } from "../lib/stats.js";
 
 export const CERTAINTY_TEXT = {
   likely: "likely",
@@ -21,13 +22,13 @@ function Provenance({ run }) {
       <p>
         {run.mode === "gemma" ? (
           <>
-            reasoned by <strong>{run.model}</strong>. every link was checked
-            against the map.
+            drawn by <strong>{run.model}</strong>. it can be wrong: every effect
+            here is a possibility.
           </>
         ) : (
           <>
             from the <strong>offline demo engine</strong>, not gemma. fixed
-            rules over the same map.
+            rules over a small known map.
           </>
         )}
       </p>
@@ -36,74 +37,137 @@ function Provenance({ run }) {
   );
 }
 
-function Connections({ systemId }) {
-  const feeds = EDGE_LIST.filter((e) => e.source === systemId).map(
-    (e) => SYSTEM_BY_ID[e.target].name,
-  );
-  const needs = EDGE_LIST.filter((e) => e.target === systemId).map(
-    (e) => SYSTEM_BY_ID[e.source].name,
-  );
+function Links({ event, visible }) {
+  const name = (key) => visible.find((e) => e.targetId === key)?.name ?? key;
+  const from = [event.sourceId, ...(event.alsoFrom ?? [])]
+    .filter(Boolean)
+    .map(name);
+  const to = visible
+    .filter(
+      (e) =>
+        e.sourceId === event.targetId || e.alsoFrom?.includes(event.targetId),
+    )
+    .map((e) => e.name);
   return (
     <p className="connections">
-      <span>feeds</span> {feeds.length ? feeds.join(", ") : "nothing further"}.
-      <br />
-      <span>leans on</span> {needs.length ? needs.join(", ") : "nothing else"}.
+      {from.length > 0 && (
+        <>
+          <span>follows from</span> {from.join(", ")}.<br />
+        </>
+      )}
+      <span>leads to</span> {to.length ? to.join(", ") : "nothing yet"}.
     </p>
   );
 }
 
+function BigPicture({ visible }) {
+  const s = summarize(visible);
+  if (!s.total) return null;
+  const peak = Math.max(...s.areas.map((a) => a.count));
+  return (
+    <section className="picture" aria-labelledby="picture-title">
+      <h3 id="picture-title">the big picture</h3>
+      <p className="picture-line">
+        {s.total} things touched, {s.rounds}{" "}
+        {s.rounds === 1 ? "round" : "rounds"} deep, {s.areas.length}{" "}
+        {s.areas.length === 1 ? "area" : "areas"} of life.
+      </p>
+      <ul className="areas">
+        {s.areas.map((area) => (
+          <li key={area.id}>
+            <span className="area-name">{area.name}</span>
+            <span
+              className="area-bar"
+              style={{
+                "--w": `${(area.count / peak) * 100}%`,
+                "--c": area.color,
+              }}
+            />
+            <span className="area-count">{area.count}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="meta">
+        {s.severity.high} big, {s.severity.medium} medium, {s.severity.low}{" "}
+        small. soonest first:{" "}
+        {Object.entries(s.timeframe)
+          .filter(([, n]) => n)
+          .map(([when, n]) => `${n} in ${when}`)
+          .join(", ")}
+        .
+      </p>
+    </section>
+  );
+}
+
 export function FieldNotes({
-  system,
   visible,
   run,
+  selectedId,
   focusedEventId,
   onInspect,
 }) {
-  const reached = visible.find((e, i) => i > 0 && e.targetId === system.id);
-  const origin = visible[0]?.targetId === system.id;
-  const focused = visible.find((e) => e.id === focusedEventId) ?? reached;
+  const origin = visible[0] ?? null;
+  const selected = visible.find((e) => e.targetId === selectedId) ?? origin;
+  const focused =
+    visible.find((e) => e.id === focusedEventId) ??
+    (selected?.round > 0 ? selected : null);
   const trail = focused ? getAncestry(visible, focused.id) : [];
-  const status = origin
-    ? "where it began"
-    : reached
-      ? "possibly affected"
-      : "steady for now";
+  const status = !selected
+    ? ""
+    : selected.round === 0
+      ? "where it began"
+      : `${CERTAINTY_TEXT[selected.certainty] ?? "possible"}, ${selected.severity} impact`;
 
   return (
     <aside className="notes" aria-label="Field notes">
-      <section className="subject">
-        <div className="subject-head">
-          <Sprite id={system.id} scale={2} />
-          <div>
-            <h2 data-testid="subject-name">
-              <Jiggle>{system.name}</Jiggle>
-            </h2>
-            <p className="status">{status}</p>
+      {selected ? (
+        <section className="subject">
+          <div className="subject-head">
+            <Sprite id={selected.icon} scale={2} />
+            <div>
+              <h2 data-testid="subject-name">
+                <Jiggle>{selected.name}</Jiggle>
+              </h2>
+              <p className="status">{status}</p>
+            </div>
           </div>
-        </div>
-        <p>{system.description}</p>
-        <Connections systemId={system.id} />
-      </section>
-
-      {focused && focused.round > 0 && (
-        <section className="why" aria-labelledby="why-title">
-          <h3 id="why-title">why might this happen?</h3>
-          <p>{focused.explanation}</p>
+          <p>{selected.explanation}</p>
           <p className="meta">
-            {CERTAINTY_TEXT[focused.certainty] ?? "possible"},{" "}
-            {focused.severity} impact. {focused.relation}.
+            {DOMAIN_BY_ID[selected.area]?.name}
+            {selected.round > 0 &&
+              `. ${selected.who ? `felt by ${selected.who}, ` : ""}${selected.timeframe}`}
           </p>
+          {selected.targetId && <Links event={selected} visible={visible} />}
+        </section>
+      ) : (
+        <section className="subject">
+          <h2>
+            <Jiggle>field notes</Jiggle>
+          </h2>
+          <p>
+            ask a question and every thing it touches gets a note here: who
+            feels it, how soon, and how it got there.
+          </p>
+        </section>
+      )}
+
+      {trail.length > 1 && (
+        <section className="why" aria-labelledby="why-title">
+          <h3 id="why-title">how did it get here?</h3>
           <ol
             className="trail"
             data-testid="ancestry"
             aria-label="How the ripple got here"
           >
             {trail.map((e) => (
-              <li key={e.id}>{SYSTEM_BY_ID[e.targetId].name}</li>
+              <li key={e.id}>{e.name}</li>
             ))}
           </ol>
         </section>
       )}
+
+      <BigPicture visible={visible} />
 
       <section className="story" aria-labelledby="story-title">
         <h2 id="story-title">
@@ -116,7 +180,7 @@ export function FieldNotes({
           <p className="empty">
             nothing has happened. yet.
             <br />
-            <span>drop a cause onto the world and the story starts here.</span>
+            <span>ask anything and the story starts here.</span>
           </p>
         ) : (
           <ol className="steps" aria-live="polite">
@@ -131,7 +195,7 @@ export function FieldNotes({
                   <span className="step-title">{event.title}</span>
                   <span className="step-meta">
                     {index === 0 ? "it started with" : `round ${event.round},`}{" "}
-                    {SYSTEM_BY_ID[event.targetId].name}
+                    {event.name}
                   </span>
                 </button>
               </li>

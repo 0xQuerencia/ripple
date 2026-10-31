@@ -1,4 +1,5 @@
 import { buildDemoChain } from "../../shared/engine.mjs";
+import { SYSTEM_BY_ID } from "../../shared/world.mjs";
 
 const OFFLINE_NOTICE =
   "The server is unreachable, so this ripple uses the offline demo engine.";
@@ -56,12 +57,22 @@ async function offlineRipple(
   { targetId, text, description, tone },
   { signal, onEvent },
 ) {
+  const system = SYSTEM_BY_ID[targetId];
   onEvent({
     type: "start",
     mode: "demo",
     model: null,
     notice: OFFLINE_NOTICE,
-    origin: { targetId, title: text, description, tone },
+    origin: {
+      targetId,
+      name: system.name,
+      area: system.domain,
+      icon: system.id,
+      known: true,
+      title: text,
+      description,
+      tone,
+    },
   });
   for (const effect of buildDemoChain({ targetId, tone })) {
     await wait(OFFLINE_GAP_MS, signal);

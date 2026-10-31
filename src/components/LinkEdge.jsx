@@ -24,7 +24,7 @@ function LinkEdgeBase({ sourceX, sourceY, targetX, targetY, data }) {
   const lit = state === "active" || state === "path";
 
   return (
-    <g className={`link link-${state}`}>
+    <g className={`link link-${state} ${data?.extra ? "link-extra" : ""}`}>
       <path className="link-base" d={path} />
       {lit && <path className="link-ink" d={path} pathLength="1" />}
       <path
