@@ -147,3 +147,73 @@ export function demoEffects({
     { frontier, visited, max },
   );
 }
+
+const MAX_ROUNDS = 3;
+
+/**
+ * Incremental validator for a ripple. Effects arrive one at a time (streamed from Gemma), in round order.
+ * Round N may only grow from systems reached in round N-1, so what comes out is always a connected,
+ * graph-legal chain no matter what the model proposed. `push` returns the accepted effect, or null.
+ */
+export function createChainBuilder({
+  targetId,
+  maxRounds = MAX_ROUNDS,
+  perRound = 3,
+}) {
+  const visited = [targetId];
+  let frontier = [targetId];
+  let reached = [];
+  let round = 1;
+  let accepted = 0;
+  return {
+    push(raw) {
+      if (!raw || typeof raw !== "object" || !SYSTEM_BY_ID[targetId])
+        return null;
+      const r = Number(raw.round);
+      if (!Number.isInteger(r) || r < round || r > maxRounds) return null;
+      if (r > round) {
+        if (r !== round + 1 || !reached.length) return null;
+        round = r;
+        frontier = reached;
+        reached = [];
+        accepted = 0;
+      }
+      if (accepted >= perRound) return null;
+      const [effect] = validateEffects([raw], { frontier, visited, max: 1 });
+      if (!effect) return null;
+      visited.push(effect.targetId);
+      reached.push(effect.targetId);
+      accepted += 1;
+      return { ...effect, round };
+    },
+  };
+}
+
+/** Validate a complete list of proposed effects in one go. */
+export function assembleChain(
+  raw,
+  { targetId, maxRounds = MAX_ROUNDS, perRound = 3 } = {},
+) {
+  if (!Array.isArray(raw)) return [];
+  const builder = createChainBuilder({ targetId, maxRounds, perRound });
+  return raw
+    .filter((e) => e && typeof e === "object")
+    .sort((a, b) => (Number(a.round) || 99) - (Number(b.round) || 99))
+    .map((e) => builder.push(e))
+    .filter(Boolean);
+}
+
+/** The offline ripple: fixed heuristics over the same graph. Never claims to be Gemma. */
+export function buildDemoChain({ targetId, tone = "negative" }) {
+  const raw = [];
+  let frontier = [targetId];
+  const visited = [targetId];
+  for (let round = 1; round <= MAX_ROUNDS; round++) {
+    const batch = demoEffects({ frontier, visited, tone });
+    if (!batch.length) break;
+    raw.push(...batch.map((e) => ({ ...e, round })));
+    frontier = batch.map((e) => e.targetId);
+    visited.push(...frontier);
+  }
+  return assembleChain(raw, { targetId });
+}
