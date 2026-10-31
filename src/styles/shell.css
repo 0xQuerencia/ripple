@@ -1,0 +1,275 @@
+.page {
+  position: relative;
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: transparent;
+}
+.page > header,
+.page > main {
+  position: relative;
+  z-index: 2;
+}
+
+.topbar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 28px 0;
+}
+.engine {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: start;
+  font-size: var(--t-small);
+  color: var(--ink-2);
+}
+.engine-dot {
+  width: 12px;
+  height: 12px;
+  border: 3px solid var(--line-2);
+  border-radius: 2px;
+}
+.engine.is-live .engine-dot {
+  border-color: #6fb96a;
+  background: var(--green);
+  animation: blink 1.6s steps(2, end) infinite;
+}
+.tabs {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.tabs button {
+  position: relative;
+  padding: 6px 12px;
+  border: 0;
+  background: none;
+  font-size: var(--t-body);
+  color: var(--ink-2);
+}
+.tabs button + button::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  background: var(--c, var(--line-2));
+}
+.tabs button:nth-child(2)::before {
+  --c: var(--tan);
+}
+.tabs button:nth-child(3)::before {
+  --c: var(--green);
+}
+.tabs button:hover {
+  color: var(--ink);
+}
+.tabs button[aria-current="page"] {
+  color: var(--ink);
+  text-decoration: underline wavy var(--accent);
+  text-decoration-thickness: 3px;
+  text-underline-offset: 6px;
+}
+.topbar-tools {
+  display: flex;
+  gap: 16px;
+  justify-self: end;
+}
+
+.stage {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr) 340px;
+  gap: 8px;
+  min-height: 0;
+  padding: 0 20px 14px;
+}
+.board {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-width: 0;
+  min-height: 0;
+  padding-top: 22px;
+}
+
+/* The board sits in a soft grey frame; it wears a rainbow once a ripple is running. */
+.frame {
+  position: relative;
+  display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  min-height: 0;
+  border: 5px solid var(--line);
+  border-radius: 8px 12px 9px 14px;
+}
+.frame::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 2px solid #ebe7ea;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.frame.is-rainbow {
+  border-width: 7px;
+  border-color: transparent;
+  border-radius: 22px 30px 20px 28px;
+  background:
+    linear-gradient(var(--bg), var(--bg)) padding-box,
+    conic-gradient(
+        from 20deg,
+        #db9591,
+        #dbaf91,
+        #dbd991,
+        #97db91,
+        #91a4db,
+        #b991db,
+        #db91d4,
+        #db9591
+      )
+      border-box;
+}
+.frame.is-rainbow::after {
+  display: none;
+}
+.frame-label {
+  position: absolute;
+  z-index: 6;
+  top: -22px;
+  left: 50%;
+  translate: -50% 0;
+  padding: 0 12px;
+  background: var(--bg);
+  font-size: 28px;
+  line-height: 1;
+}
+
+.playback {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 8px 4px;
+}
+.playback input[type="range"] {
+  flex: 1;
+  min-width: 80px;
+  height: 22px;
+  appearance: none;
+  background: transparent;
+}
+.playback input[type="range"]::-webkit-slider-runnable-track {
+  height: 12px;
+  border: 3px solid var(--line);
+  border-radius: 3px;
+  background: #f0ecee;
+}
+.playback input[type="range"]::-moz-range-track {
+  height: 6px;
+  border: 3px solid var(--line);
+  border-radius: 3px;
+  background: #f0ecee;
+}
+.playback input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 22px;
+  margin-top: -9px;
+  border: 0;
+  border-radius: 3px;
+  background: var(--btn);
+}
+.playback input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 22px;
+  border: 0;
+  border-radius: 3px;
+  background: var(--btn);
+}
+.playback input[type="range"]:disabled {
+  opacity: 0.5;
+}
+.playback-status {
+  min-width: 14ch;
+  font-size: var(--t-small);
+  color: var(--ink-2);
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 76px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 10px 14px 11px 18px;
+  border-radius: 4px;
+  background: var(--btn);
+  color: var(--bg);
+  font-size: var(--t-body);
+  line-height: 1.15;
+  translate: -50% 0;
+  animation: pop-in 360ms steps(4, end) both;
+}
+.toast button {
+  padding: 2px 8px 3px;
+  border: 2px solid #8b8683;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--bg);
+  font-size: var(--t-small);
+}
+.toast button:hover {
+  background: #6d6764;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@media (max-width: 1180px) {
+  .page {
+    height: auto;
+    min-height: 100dvh;
+    grid-template-rows: auto auto;
+  }
+  .topbar {
+    grid-template-columns: 1fr auto;
+    row-gap: 8px;
+  }
+  .tabs {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: center;
+  }
+  .stage {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0 16px 24px;
+    gap: 28px;
+  }
+  .left {
+    order: 0;
+  }
+  .board {
+    order: 1;
+    height: min(80dvh, 680px);
+  }
+  .notes {
+    order: 2;
+  }
+  .toast {
+    bottom: 16px;
+  }
+}

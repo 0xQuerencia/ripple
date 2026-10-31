@@ -1,0 +1,33 @@
+@font-face {
+  font-family: augiepixel;
+  src: url("../assets/fonts/augiepixel.ttf") format("truetype");
+  font-display: block;
+}
+
+:root {
+  --bg: #fbfbfb;
+  --ink: #504b49;
+  --ink-2: #6d6764; /* secondary text, 5:1 on the page */
+  --accent: #db9591; /* decorative: annotations, strokes */
+  --accent-text: #a8524d; /* the same hue, dark enough for text */
+  --tan: #dbaf91;
+  --yellow: #dbd991;
+  --green: #97db91;
+  --blue: #91a4db;
+  --purple: #b991db;
+  --pink: #db91d4;
+  --line: #d9d4d8;
+  --line-2: #c4bdc2;
+  --paper: #ece6e8; /* polaroid card */
+  --btn: #5b5755;
+
+  --font: augiepixel, sans-serif;
+  --scale: 0.9;
+  --t-body: 21px;
+  --t-small: 18px;
+  --t-h2: 31px;
+  --t-title: 58px;
+  --step: steps(4, end);
+
+  color-scheme: light;
+}

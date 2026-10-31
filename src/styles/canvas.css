@@ -1,0 +1,323 @@
+.canvas {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+.canvas .react-flow {
+  --xy-background-color: transparent;
+  background: transparent;
+}
+.canvas .react-flow__node {
+  cursor:
+    url("../assets/cursor-pointer.png") 2 2,
+    grab;
+}
+.canvas .react-flow__attribution {
+  background: transparent;
+  font-size: 14px;
+}
+.canvas .react-flow__attribution a {
+  color: var(--line-2);
+  text-decoration: none;
+}
+
+.invite {
+  position: absolute;
+  z-index: 4;
+  top: 14px;
+  left: 22px;
+  max-width: 25ch;
+  pointer-events: none;
+}
+.armed-note {
+  position: absolute;
+  z-index: 5;
+  top: 14px;
+  left: 50%;
+  translate: -50% 0;
+  padding: 7px 14px 9px;
+  border-radius: 4px;
+  background: var(--btn);
+  color: var(--bg);
+  transform: none;
+  animation: pop-in 360ms steps(4, end) both;
+  max-width: none;
+}
+.canvas.is-armed .system-node .node-face {
+  cursor: crosshair;
+}
+
+.zoom {
+  position: absolute;
+  z-index: 5;
+  left: 16px;
+  bottom: 14px;
+  display: flex;
+  gap: 6px;
+}
+.zoom button {
+  min-width: 36px;
+  height: 34px;
+  padding: 0 8px;
+  border: 3px solid var(--line);
+  border-radius: 3px;
+  background: var(--bg);
+  font-size: var(--t-body);
+  line-height: 1;
+}
+.zoom button:hover {
+  border-color: var(--accent);
+}
+.legend {
+  position: absolute;
+  z-index: 5;
+  right: 16px;
+  top: 14px;
+  display: flex;
+  gap: 16px;
+  font-size: var(--t-small);
+  color: var(--ink-2);
+}
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.key-line {
+  width: 24px;
+  height: 0;
+  border-top: 3px solid var(--line-2);
+}
+.key-line.is-lit {
+  border-top-color: var(--accent);
+  border-top-width: 4px;
+}
+.key-ring {
+  width: 16px;
+  height: 16px;
+  border: 3px dashed var(--accent);
+  border-radius: 50%;
+}
+
+/* Systems: a doodle and its name, nothing more until the ripple arrives. */
+.system-node {
+  position: relative;
+  width: 132px;
+}
+.node-face {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 4px 4px;
+  border: 0;
+  background: none;
+}
+.node-face:hover .sprite {
+  animation: shiver 500ms steps(1, end) infinite;
+}
+.node-face:active .sprite {
+  transform: scale(0.94);
+}
+.node-name {
+  font-size: 24px;
+  line-height: 1;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 4px;
+}
+.system-node.is-selected .node-name {
+  text-decoration: underline wavy var(--accent);
+  text-decoration-thickness: 3px;
+}
+.system-node.is-hint .sprite {
+  animation: hop 1s steps(2, end) infinite;
+}
+.system-node.is-drop .sprite {
+  transform: scale(1.12) rotate(-4deg);
+}
+.system-node.is-drop .node-ring {
+  border: 3px dashed var(--accent);
+}
+.canvas:not(.is-idle)
+  .system-node:not(.is-source):not(.is-affected)
+  .node-face {
+  opacity: 0.55;
+}
+
+.node-ring {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 104px;
+  height: 104px;
+  margin-left: -52px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.is-source .node-ring {
+  border: 4px solid var(--accent);
+}
+.is-affected.sev-low .node-ring {
+  border: 3px dashed var(--accent);
+}
+.is-affected.sev-medium .node-ring {
+  border: 4px solid var(--accent);
+}
+.is-affected.sev-high .node-ring {
+  border: 6px double var(--accent);
+}
+.is-source .node-ring::after,
+.is-affected .node-ring::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 4px solid var(--accent);
+  border-radius: 50%;
+  opacity: 0;
+  animation: ring-out 1.1s steps(6, end) both;
+}
+.node-flag {
+  position: absolute;
+  top: 2px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+  background: var(--btn);
+  color: var(--bg);
+  font-size: 22px;
+  line-height: 1;
+  animation: pop 360ms steps(3, end) both;
+}
+
+.node-tag {
+  position: absolute;
+  z-index: 3;
+  top: 100%;
+  left: 50%;
+  translate: -50% 4px;
+  width: max-content;
+  max-width: 158px;
+  padding: 3px 9px 5px;
+  border: 3px solid var(--line);
+  border-radius: 3px;
+  background: var(--bg);
+  font-size: 18px;
+  line-height: 1.05;
+  text-align: center;
+  pointer-events: none;
+  animation: tag-in 420ms steps(4, end) 140ms both;
+}
+.tag-certainty {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-2);
+  font-size: 16px;
+}
+.tag-source {
+  background: var(--btn);
+  border-color: var(--btn);
+  color: var(--bg);
+}
+
+/* Links: the ink draws itself from source to target, one chunky step at a time. */
+.link-base {
+  fill: none;
+  stroke: var(--line-2);
+  stroke-opacity: 0.55;
+  stroke-width: 2;
+}
+.link-near .link-base {
+  stroke: #9d9693;
+  stroke-opacity: 0.8;
+  stroke-width: 2.5;
+}
+.link-active .link-base,
+.link-path .link-base {
+  stroke-opacity: 0.25;
+}
+.link-dim .link-base {
+  stroke-opacity: 0.16;
+}
+.link-ink {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 4.5;
+  stroke-linecap: square;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw 760ms steps(14, end) forwards;
+}
+.link-path .link-ink {
+  stroke-width: 6;
+}
+.link-arrow {
+  fill: none;
+  stroke: #9d9693;
+  stroke-width: 2.5;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  opacity: 0.5;
+}
+.link-near .link-arrow {
+  opacity: 0.9;
+}
+.link-active .link-arrow,
+.link-path .link-arrow {
+  stroke: var(--accent);
+  stroke-width: 4;
+  opacity: 1;
+}
+.link-dim .link-arrow {
+  opacity: 0.15;
+}
+
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes ring-out {
+  from {
+    opacity: 1;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+@keyframes tag-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+@keyframes hop {
+  50% {
+    transform: translateY(-6px);
+  }
+}
+@keyframes shiver {
+  0% {
+    transform: rotate(0);
+  }
+  33% {
+    transform: rotate(-3deg) translateY(-2px);
+  }
+  66% {
+    transform: rotate(3deg);
+  }
+}
