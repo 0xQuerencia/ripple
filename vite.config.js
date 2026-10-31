@@ -22,6 +22,8 @@ function rippleApi(env) {
 export default defineConfig(({ mode }) => ({
   plugins: [react(), rippleApi(loadEnv(mode, process.cwd(), ""))],
   build: {
+    // 250+ tiny sprites: ship them as files, not as data URIs inside the JavaScript.
+    assetsInlineLimit: 0,
     rollupOptions: {
       output: { manualChunks: { "world-canvas": ["@xyflow/react"] } },
     },

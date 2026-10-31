@@ -23,7 +23,7 @@ export function Sprite({ id, scale = 2, className = "", alt = "" }) {
   const [w, h] = SIZE[id] ?? [40, 40];
   return (
     <img
-      src={SRC[id] ?? SRC.sparkle}
+      src={SRC[id] ?? SRC[`i-${id}`] ?? SRC.sparkle}
       width={w * scale}
       height={h * scale}
       alt={alt}
