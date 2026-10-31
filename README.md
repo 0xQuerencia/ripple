@@ -1,72 +1,63 @@
-# ripple! 🦋
+# ripple!
 
-**Little causes, big consequences.** A playful, scrapbook-style world for exploring how one small change can travel through connected systems.
+**Little causes, big consequences.** Drop a cause onto a map of 12 connected systems and watch **Gemma 4** reason about how it could spread, one link at a time.
 
-![Ripple world](artifacts/world-desktop.png)
+![Ripple, ready to play](artifacts/world-desktop.png)
+![A ripple spreading, reasoned by Gemma 4](artifacts/ripple-desktop.png)
 
-## Run locally
+Built for MLH: **Best Use of Gemma 4** (Gemini API) and **Best Open-Source AI Project** (MIT licensed).
 
-Requires Node.js 22 or later.
+## How it works
+
+1. You pick a cause (a power outage, a drought, a new invention) or type your own what-if, and drop it on a system.
+2. The server asks Gemma 4 (`gemma-4-26b-a4b-it` by default) to follow the map's real links for up to three rounds, and streams the answer back line by line, so the ripple grows on screen while Gemma is still writing.
+3. **Every effect is checked before you see it.** The model can only use the 26 real links in `shared/world.mjs`, one round at a time, never revisiting a system (`createChainBuilder` in `shared/engine.mjs`). It cannot invent a connection. Text and enum fields are length-bounded.
+4. Anything is a *possibility*, never a prediction, and each note says how sure Gemma is. Tap a note to trace it back, hop by hop, to the cause that began it.
+5. If there is no API key or Gemma is unreachable, the app falls back to a fixed offline demo engine **and says so** in the interface.
+
+Your custom text is sent to Gemma as quoted data with instructions to ignore any commands inside it. Whatever comes back still has to pass the graph check.
+
+## Run it
+
+Needs Node.js 22 or later.
 
 ```sh
 npm ci
-npm run dev
+cp .env.example .env     # then paste your key from https://aistudio.google.com/apikey
+npm run dev              # http://localhost:5173
 ```
 
-Open the address Vite prints. It chooses the next free port if 5173 is occupied. In this workspace the preview runs at **http://127.0.0.1:5174**.
+The key stays on the server (`server/`) and is never sent to the browser. Without a key everything still works in offline demo mode.
 
 ```sh
-npm run build        # production files in dist/
-npm run preview      # serve the production build
-npm test             # deterministic engine and scenario tests
-npm run test:browser  # Chromium interaction tests
+npm run build            # production files in dist/
+npm start                # serve dist/ and the API together (PORT, default 8787)
+npm test                 # engine, scenario, Gemma client and API tests (no network)
+npm run test:browser     # Chromium interaction tests (offline demo engine, port 5179)
+npm run sprites          # regenerate the pixel-art sprites from scripts/glyphs.js
 ```
-
-For a fresh browser test setup, run `npx playwright install chromium` first.
-
-## Play
-
-1. Click a cause sticker, then its matching system, or drag the sticker directly onto the system.
-2. Watch possible consequences unfold through up to three rounds. Pause, step forward, or rewind with the playback bar.
-3. Click any system for field notes. Click a consequence to see its exact ancestry and highlight that path in the world.
-4. Read the same sequence in **timeline**. In **compare**, pin one experiment, reset, and run another to compare their effects.
-5. For a custom what-if, select a system, type a cause, choose a disruption or a good thing, and try it.
-
-The world supports dragging, panning, zooming, and fit-to-screen. System buttons work with the keyboard, the layout adapts to smaller screens, and reduced-motion mode reveals scenario effects immediately.
-
-## What is implemented
-
-- The canonical 12 systems, 26 directed connections, and six cause stickers.
-- Compatible cause targets, validated deterministic effects, and unique parent event IDs.
-- Replayable scenario snapshots with pause, step, rewind, and reset.
-- Node details, causal path highlighting, timeline, and session-scoped experiment comparison.
-- Locally hosted handwritten and body fonts, pastel stickers, paper details, and botanical accents.
-
-**DEMO · no AI:** All effects are fixed examples from the supplied starter engine. Custom text labels an experiment; the app does not interpret its meaning. Positive scenarios follow the same graph with conditional benefit text. This is a simplified model of possibilities, not a real-world prediction tool.
-
-Pinned experiments last for the current page session. They do not persist through a reload. Comparison shows two independently generated experiments from the same seeded world; it does not implement mid-scenario interventions.
-
-Live Gemma integration, new AI-proposed edges, numerical resource simulation, and Graphify indexing are future work. Graphify is developer tooling; React Flow renders the player-facing graph.
 
 ## Project map
 
-- `shared/world.mjs` — systems, directed dependencies, and cause inventory.
-- `shared/engine.mjs` — bounded effect validation and deterministic demonstration rules.
-- `shared/scenario.mjs` — immutable event batches and parent-event ancestry.
-- `src/App.jsx` — game state, world canvas, notebook, timeline, and comparison.
-- `src/Art.jsx` — consistent Phosphor illustration vocabulary.
-- `src/styles.css` — paper palette, type, layout, interaction, and responsive rules.
-- `tests/` — engine, scenario, and browser coverage.
-- `artifacts/` — captured desktop, mobile, and active-scenario screenshots.
+- `shared/world.mjs`: the 12 systems, 26 directed links and six preset causes.
+- `shared/engine.mjs`: effect validation, the streaming chain builder, and the offline demo engine.
+- `shared/scenario.mjs`: replayable event snapshots and ancestry tracing.
+- `server/gemma.mjs`: prompt, streaming Gemini API client, line-by-line parsing.
+- `server/api.mjs`: `/api/ripple` (NDJSON stream) and `/api/status`; input validation, body limit, rate limit.
+- `server/index.mjs`: production server with security headers.
+- `src/`: the React interface (`components/`, `hooks/useRipple.js`, `styles/`).
+- `scripts/`: the sprite pipeline.
 
-Development scenario starts log a small diagnostic through `console.debug`; no user text or API credentials are logged.
+## Disclosure and credits
 
-## Credits and provenance
+- **Existing work:** the world data (`shared/world.mjs`), the effect validator, the canned demo effects and the first engine tests come from the project's supplied master spec. Everything else in this repository was written for this project: the Gemma integration, the streaming server, the chain validation, the interface and its tests.
+- **Models and libraries:** Gemma 4 through the Gemini API (`@google/genai` is not used; the server calls the REST API directly), [React](https://react.dev/) and [React Flow](https://reactflow.dev/) (MIT), [Vite](https://vite.dev/) (MIT).
+- **Font:** [augiepixel](https://jamegam.hackclub.com/fonts/augiepixel.ttf), drawn by Augie Ruben and offered free to use for anything without credit or permission. Credit given anyway, thank you.
+- **Visual inspiration:** the look (soft pixel handwriting, doodles, salmon annotations, rainbow haze) is inspired by [jame gam by Hack Club](https://jamegam.hackclub.com/). No artwork or code from that site is used; the sprites here are generated from this repository's own vector drawings. This project is not affiliated with Hack Club.
+- **AI-assisted development:** this project was built with Claude Code and the [Impeccable](https://github.com/pbakaus/impeccable) design skill (Apache-2.0).
 
-The initial world data, effect validator, canned effects, and five engine tests were restored from the code appendix in the user-supplied **RIPPLE_MASTER_SPEC_GRAPHIFY.md**. The supplied **Ripple! Whimsical Cause-and-Effect World** image guided the art direction. The interactive interface, scenario ancestry, playback, comparison, and additional tests were built in this repository. The reference image is not embedded as the interface.
+Ripple is a toy model of possibilities. It is not a forecasting tool.
 
-Libraries and assets: [React](https://react.dev/) (MIT), [React Flow](https://reactflow.dev/) (MIT), [Phosphor Icons](https://phosphoricons.com/) (MIT), [Patrick Hand](https://fonts.google.com/specimen/Patrick+Hand) and [Nunito Sans](https://fonts.google.com/specimen/Nunito+Sans) (SIL Open Font License, self-hosted through Fontsource). Dependency distributions retain their license notices.
+## License
 
-## More previews
-
-[Active ripple and causal trace](artifacts/ripple-desktop.png) · [Mobile layout](artifacts/world-mobile.png)
+MIT, see [LICENSE](LICENSE).
