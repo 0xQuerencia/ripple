@@ -209,8 +209,8 @@ const RAW_SYSTEMS = [
     "cyber",
     "cybersecurity",
     "tech",
-    "People and tools that defend systems from hackers, scams and ransomware.",
-    "hackers hacker hacking ransomware malware scam virus attack",
+    "The people and tools that defend computers and networks from attacks.",
+    "security antivirus firewall defenders password passwords encryption",
   ),
   S(
     "software",
@@ -428,6 +428,13 @@ const RAW_SYSTEMS = [
     "Labs and researchers who invent new things.",
     "scientists lab discovery invention",
   ),
+  S(
+    "cybercrime",
+    "hackers & scams",
+    "safety",
+    "Hackers, scammers and ransomware gangs who attack computers and trick people online.",
+    "hackers hacker hacking ransomware malware scam scams scammers phishing attack cyberattack",
+  ),
 ];
 
 // [source>target, why a change at the source can reach the target]
@@ -570,17 +577,15 @@ const RAW_LINKS = [
   ["datacenters>banks", "Banks run on servers"],
   ["datacenters>social", "Platforms are hosted there"],
   ["datacenters>water", "Cooling uses a lot of water"],
-  ["cyber>datacenters", "Attacks can knock servers offline"],
-  ["cyber>banks", "Hackers target banks"],
-  ["cyber>health", "Ransomware hits hospitals"],
-  ["cyber>power", "Attacks on the grid"],
-  ["cyber>business", "Scams and breaches hit firms"],
+  ["cyber>datacenters", "Weak defences let attacks knock servers offline"],
+  ["cyber>banks", "Weak defences leave banks exposed"],
+  ["cyber>health", "Weak defences let ransomware hit hospitals"],
+  ["cyber>power", "Weak defences expose the grid"],
+  ["cyber>business", "Breaches hit firms"],
   ["cyber>trust", "Breaches erode trust"],
-  ["cyber>crime", "Cybercrime is crime"],
   ["cyber>software", "Security flaws force updates"],
   ["cyber>military", "Cyber warfare is part of defence"],
-  ["cyber>people", "Scams target ordinary people"],
-  ["crime>cyber", "Criminal gangs fuel hacking"],
+  ["cyber>people", "Leaked data and scams reach ordinary people"],
   ["software>business", "Apps power modern business"],
   ["software>jobs", "Software is a big employer"],
   ["software>banks", "Banking runs on apps"],
@@ -681,6 +686,20 @@ const RAW_LINKS = [
   ["research>industry", "Inventions improve factories"],
   ["research>health", "Medical breakthroughs reach patients"],
   ["research>renewables", "Better batteries and panels"],
+  // hackers and scams
+  ["cybercrime>cyber", "Attackers keep defenders busy"],
+  ["cybercrime>banks", "Fraud and theft hit banks"],
+  ["cybercrime>people", "Scams target ordinary people"],
+  ["cybercrime>business", "Ransomware and breaches hit firms"],
+  ["cybercrime>health", "Ransomware locks up hospitals"],
+  ["cybercrime>datacenters", "Attacks knock servers offline"],
+  ["cybercrime>power", "Attacks on the grid"],
+  ["cybercrime>trust", "Breaches and scams erode trust"],
+  ["cybercrime>law", "Cases pile up for police and courts"],
+  ["cybercrime>communications", "Attacks disrupt networks"],
+  ["crime>cybercrime", "Criminal gangs move online"],
+  ["ai>cybercrime", "AI makes scams and attacks easier"],
+  ["cybercrime>jobs", "Security and recovery work employs many"],
 ];
 
 // Layout: each area is a small block on a grid, so related systems sit together on the map.
@@ -783,7 +802,7 @@ export const CAUSES = [
   {
     id: "cyberattack",
     title: "ransomware attack",
-    target: "cyber",
+    target: "cybercrime",
     tone: "negative",
     description: "A criminal gang locks up computer systems and demands money.",
   },

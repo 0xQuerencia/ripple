@@ -1,13 +1,13 @@
 import { CAUSES, SYSTEM_BY_ID } from "../shared/world.mjs";
-import { buildDemoChain } from "../shared/engine.mjs";
-import { streamGemma } from "./gemma.mjs";
+import { buildDemoChain, guessOrigin } from "../shared/engine.mjs";
+import { DEFAULT_MODEL, streamGemma } from "./gemma.mjs";
 
 const MAX_BODY_BYTES = 4096;
 const MAX_TEXT = 80;
 const NOTICE_NO_KEY =
   "No Gemini API key is configured, so this ripple uses the offline demo engine.";
 const NOTICE_FAILED =
-  "Gemma was unreachable, so this ripple uses the offline demo engine.";
+  "Gemma did not answer this time, so this ripple uses the offline demo engine.";
 
 class HttpError extends Error {
   constructor(status, message) {
@@ -43,8 +43,6 @@ async function readJson(req) {
 
 /** Normalise a request into one trusted shape. Anything unexpected is a 400, never passed on. */
 function parseRippleRequest(body) {
-  if (!SYSTEM_BY_ID[body.targetId])
-    throw new HttpError(400, "Pick one of the 12 systems to start from.");
   const preset =
     typeof body.causeId === "string"
       ? CAUSES.find((c) => c.id === body.causeId)
@@ -54,7 +52,7 @@ function parseRippleRequest(body) {
       text: preset.title,
       description: preset.description,
       tone: preset.tone,
-      targetId: body.targetId,
+      targetId: preset.target,
     };
   const text = typeof body.text === "string" ? body.text.trim() : "";
   if (!text || text.length > MAX_TEXT)
@@ -62,11 +60,14 @@ function parseRippleRequest(body) {
       400,
       `Describe your cause in 1 to ${MAX_TEXT} characters.`,
     );
+  // A custom cause may name a starting system, but normally Gemma decides where it begins.
+  if (body.targetId != null && !SYSTEM_BY_ID[body.targetId])
+    throw new HttpError(400, "That is not a system on the map.");
   return {
     text,
     description: "",
     tone: body.tone === "positive" ? "positive" : "negative",
-    targetId: body.targetId,
+    targetId: body.targetId ?? null,
   };
 }
 
@@ -85,26 +86,28 @@ function createRateLimiter({ limit, windowMs }) {
 const line = (event) => `${JSON.stringify(event)}\n`;
 
 function* demoEvents(input, notice) {
+  const targetId = input.targetId ?? guessOrigin(input.text);
+  const system = SYSTEM_BY_ID[targetId];
   yield {
     type: "start",
     mode: "demo",
     model: null,
     notice,
-    origin: { ...originOf(input), description: input.description },
+    origin: {
+      targetId,
+      name: system.name,
+      area: system.domain,
+      icon: system.id,
+      known: true,
+      title: input.text,
+      tone: input.tone,
+      description: input.description,
+    },
   };
-  for (const effect of buildDemoChain({
-    targetId: input.targetId,
-    tone: input.tone,
-  }))
+  for (const effect of buildDemoChain({ targetId, tone: input.tone }))
     yield { type: "effect", effect };
   yield { type: "done" };
 }
-
-const originOf = (input) => ({
-  targetId: input.targetId,
-  title: input.text,
-  tone: input.tone,
-});
 
 const MAX_ATTEMPTS = 3;
 const LARGE_MODEL = "gemma-4-31b-it";
@@ -129,25 +132,29 @@ export function createApi({
 
   /** Stream one Gemma attempt to the client. Nothing is sent until the first valid effect arrives. */
   async function relay(input, useModel, emit, state, signal) {
-    let description = "";
+    let origin = null;
     for await (const event of streamGemma(input, {
       fetchImpl,
       apiKey,
       model: useModel,
       signal,
     })) {
-      if (event.type === "origin") description = event.description;
-      else if (event.type === "effect") {
+      if (event.type === "refused") {
+        emit(event);
+        state.refused = true;
+        return;
+      }
+      if (event.type === "origin") {
+        origin = {
+          ...event.node,
+          targetId: event.node.key,
+          title: input.text,
+          tone: input.tone,
+          description: event.description || input.description,
+        };
+      } else if (event.type === "effect" && origin) {
         if (!state.effects)
-          emit({
-            type: "start",
-            mode: "gemma",
-            model: useModel,
-            origin: {
-              ...originOf(input),
-              description: description || input.description,
-            },
-          });
+          emit({ type: "start", mode: "gemma", model: useModel, origin });
         state.effects += 1;
         emit(event);
       } else if (event.type === "summary" && state.effects) emit(event);

@@ -25,7 +25,7 @@ test("the world is big, and every link joins two known systems", () => {
 });
 
 test("free text maps to a sensible starting system", () => {
-  assert.equal(guessOrigin("hackers die"), "cyber");
+  assert.equal(guessOrigin("hackers die"), "cybercrime");
   assert.equal(guessOrigin("all the bees disappear"), "nature");
   assert.equal(guessOrigin("a huge internet outage"), "communications");
   assert.equal(guessOrigin("zzz qqq"), "people");

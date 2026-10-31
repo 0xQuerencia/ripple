@@ -226,7 +226,17 @@ export function buildDemoChain({ targetId, tone = "negative" }) {
     frontier = batch.map((e) => e.targetId);
     visited.push(...frontier);
   }
-  return assembleChain(raw, { targetId });
+  return assembleChain(raw, { targetId }).map((effect) => {
+    const system = SYSTEM_BY_ID[effect.targetId];
+    return {
+      ...effect,
+      name: system.name,
+      area: system.domain,
+      icon: system.id,
+      known: true,
+      alsoFrom: [],
+    };
+  });
 }
 
 const WORD = /[a-z0-9]+/g;
