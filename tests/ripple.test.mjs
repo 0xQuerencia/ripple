@@ -189,3 +189,20 @@ test("markup in model text is data, not instructions or HTML", () => {
   );
   assert.ok(typeof e.title === "string" && typeof e.name === "string");
 });
+
+test("long dashes in model text become plain punctuation", () => {
+  const b = createRippleBuilder(origin);
+  const e = b.push(
+    effect({
+      name: "Slow — steady",
+      title: "Prices rise — slowly",
+      explanation: "Costs climb 5–10% – roughly — over a year.",
+      who: "— shoppers —",
+    }),
+  );
+  for (const field of [e.name, e.title, e.explanation, e.who])
+    assert.doesNotMatch(field, /[–—]/);
+  assert.equal(e.title, "Prices rise, slowly");
+  assert.equal(e.explanation, "Costs climb 5-10%, roughly, over a year.");
+  assert.equal(e.who, "shoppers");
+});

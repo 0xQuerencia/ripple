@@ -26,11 +26,19 @@ const AREA_ICON = {
 const CERTAINTIES = ["likely", "possible", "speculative"];
 const SEVERITIES = ["low", "medium", "high"];
 
-const clean = (s, max) =>
+/**
+ * Tidy a piece of model text: one line, trimmed, cut to length. Models like long dashes, so they
+ * become plain commas and hyphens; the map should read like something a person wrote.
+ */
+export const cleanText = (s, max) =>
   String(s ?? "")
     .replace(/\s+/g, " ")
     .trim()
+    .replace(/\s*\u2014\s*|\s+\u2013\s+/g, ", ")
+    .replace(/\u2013/g, "-")
+    .replace(/^,\s*|,\s*$/g, "")
     .slice(0, max);
+const clean = cleanText;
 
 export const slugify = (text) =>
   String(text ?? "")

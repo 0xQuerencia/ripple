@@ -3,6 +3,7 @@ import { ICON_IDS } from "../shared/icons.mjs";
 import {
   MAX_CAUSE_TEXT,
   RIPPLE_LIMITS,
+  cleanText,
   createRippleBuilder,
 } from "../shared/ripple.mjs";
 
@@ -188,7 +189,8 @@ export async function* streamGemma(
         yield {
           type: "refused",
           message:
-            clean(item.refusal, 200) || "That one is not something I can map.",
+            cleanText(item.refusal, 200) ||
+            "That one is not something I can map.",
         };
         return;
       }
@@ -206,10 +208,10 @@ export async function* streamGemma(
       yield {
         type: "origin",
         node: builder.origin,
-        description: clean(item.origin.description, 220),
+        description: cleanText(item.origin.description, 220),
       };
     } else if (typeof item.summary === "string") {
-      yield { type: "summary", text: clean(item.summary, 160) };
+      yield { type: "summary", text: cleanText(item.summary, 160) };
     } else if ("round" in item && builder) {
       const effect = builder.push(item);
       if (effect) yield { type: "effect", effect };

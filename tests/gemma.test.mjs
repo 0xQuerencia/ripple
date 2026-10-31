@@ -691,3 +691,21 @@ test("api: once the hourly Gemma budget is spent it serves the demo and says why
   }
   assert.deepEqual(modes, ["gemma", "gemma", "demo", "demo"]);
 });
+
+test("the origin sentence and the summary lose long dashes too", async () => {
+  const lines = [
+    {
+      origin: { key: "power", description: "The grid goes dark — everywhere." },
+    },
+    { round: 1, from: "power", key: "water", title: "Pumps slow" },
+    { summary: "Quiet streets — loud generators." },
+  ];
+  const events = await collect(
+    streamGemma(
+      { text: "x", targetId: "power" },
+      { fetchImpl: okFetch(lines), apiKey: "k" },
+    ),
+  );
+  assert.equal(events[0].description, "The grid goes dark, everywhere.");
+  assert.equal(events.at(-1).text, "Quiet streets, loud generators.");
+});
