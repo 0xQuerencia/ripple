@@ -1,0 +1,22 @@
+# Self-hosting: `docker compose up -d --build`, with a reverse proxy in front for HTTPS.
+# The Gemini key lives only in the `.env` file on the server (see .env.example). It is never in the image.
+services:
+  ripple:
+    build: .
+    image: ripple:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # How many reverse proxies sit in front of this container. 1 = Caddy or nginx on the same machine;
+      # 2 = Cloudflare in front of Caddy or nginx. Wrong values make rate limits per proxy, not per visitor.
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
+    # Only the proxy on this machine can reach it. Change to "8787:8787" if the proxy is on another box.
+    ports:
+      - "127.0.0.1:8787:8787"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

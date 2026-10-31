@@ -631,3 +631,63 @@ test("api: a long, chatty question up to the limit is accepted and passed to Gem
   assert.equal(events[0].mode, "gemma");
   assert.ok(sent.includes(`<cause>${text.trim()}</cause>`));
 });
+
+test("api: visitors behind a proxy get separate rate limits", async () => {
+  const api = createApi({
+    apiKey: "",
+    model: "m",
+    limit: 1,
+    trustedProxyHops: 1,
+  });
+  const ask = (ip) => {
+    const chunks = [Buffer.from(JSON.stringify({ causeId: "blackout" }))];
+    const req = Object.assign(
+      (async function* () {
+        yield* chunks;
+      })(),
+      {
+        method: "POST",
+        url: "/api/ripple",
+        socket: { remoteAddress: "10.0.0.1" },
+        headers: { "x-forwarded-for": ip },
+      },
+    );
+    let status = 0;
+    const res = {
+      setHeader() {},
+      writeHead: (s) => {
+        status = s;
+      },
+      write() {},
+      end() {},
+    };
+    return api(req, res).then(() => status);
+  };
+  assert.equal(await ask("203.0.113.1"), 200);
+  assert.equal(await ask("203.0.113.1"), 429);
+  assert.equal(await ask("203.0.113.2"), 200);
+});
+
+test("api: once the hourly Gemma budget is spent it serves the demo and says why", async () => {
+  const api = createApi({
+    apiKey: "k",
+    model: "m",
+    globalLimit: 2,
+    fetchImpl: okFetch(POWER_LINES),
+    limit: 99,
+  });
+  const modes = [];
+  for (let i = 0; i < 4; i++) {
+    const { events } = await call(
+      api,
+      "POST",
+      "/api/ripple",
+      { causeId: "blackout" },
+      `7.7.7.${i}`,
+    );
+    modes.push(events[0].mode);
+    if (events[0].mode === "demo")
+      assert.match(events[0].notice, /busy|budget|rest/i);
+  }
+  assert.deepEqual(modes, ["gemma", "gemma", "demo", "demo"]);
+});

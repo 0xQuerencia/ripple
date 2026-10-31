@@ -2,10 +2,13 @@ import { CAUSES, SYSTEM_BY_ID } from "../shared/world.mjs";
 import { buildDemoChain, guessOrigin } from "../shared/engine.mjs";
 import { MAX_CAUSE_TEXT } from "../shared/ripple.mjs";
 import { DEFAULT_MODEL, streamGemma } from "./gemma.mjs";
+import { clientIp } from "./network.mjs";
 
 const MAX_BODY_BYTES = 4096;
 const NOTICE_NO_KEY =
   "No Gemini API key is configured, so this ripple uses the offline demo engine.";
+const NOTICE_BUSY =
+  "Gemma is busy right now (the hourly budget is used up), so this ripple uses the offline demo engine. Try again soon.";
 const NOTICE_FAILED =
   "Gemma did not answer this time, so this ripple uses the offline demo engine.";
 
@@ -126,9 +129,17 @@ export function createApi({
   limit = 12,
   windowMs = 60_000,
   retryDelayMs = 700,
+  trustedProxyHops = 0,
+  globalLimit = 300,
+  globalWindowMs = 3_600_000,
   log = console.error,
 }) {
   const allow = createRateLimiter({ limit, windowMs });
+  // One shared budget for every visitor, so a public URL cannot spend the whole Gemini quota.
+  const allowGemma = createRateLimiter({
+    limit: globalLimit,
+    windowMs: globalWindowMs,
+  });
 
   /** Stream one Gemma attempt to the client. Nothing is sent until the first valid effect arrives. */
   async function relay(input, useModel, emit, state, signal) {
@@ -164,7 +175,7 @@ export function createApi({
   }
 
   async function ripple(req, res) {
-    if (!allow(req.socket?.remoteAddress ?? "unknown"))
+    if (!allow(clientIp(req, trustedProxyHops)))
       throw new HttpError(429, "Slow down a little. Try again in a minute.");
     const input = parseRippleRequest(await readJson(req));
 
@@ -178,6 +189,7 @@ export function createApi({
       res.end();
     };
     if (!apiKey) return emitAll(demoEvents(input, NOTICE_NO_KEY));
+    if (!allowGemma("all")) return emitAll(demoEvents(input, NOTICE_BUSY));
 
     const abort = new AbortController();
     res.on?.("close", () => abort.abort());

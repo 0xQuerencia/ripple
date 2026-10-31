@@ -1,0 +1,16 @@
+# Never bake secrets, history or local tooling into an image.
+.env
+.env.*
+!.env.example
+.git
+.claude
+.impeccable
+graphify-out
+node_modules
+dist
+test-results
+playwright-report
+artifacts
+tests
+docs
+*.log
