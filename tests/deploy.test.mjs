@@ -160,3 +160,29 @@ test("a secret file can never be uploaded to a host by accident", async () => {
   for (const must of [".env", ".git", ".claude"])
     assert.match(ignore, new RegExp(`^${must.replace(".", "\\.")}$`, "m"));
 });
+
+test("link previews show the right line and a real 1200x630 image", async () => {
+  const html = await readFile(
+    new URL("../index.html", import.meta.url),
+    "utf8",
+  );
+  const content = (key) =>
+    html.match(
+      new RegExp(`(?:property|name)="${key}"\\s+content="([^"]*)"`),
+    )?.[1];
+  const line = "Cause and Effect simulation. To answer your WHAT IFs";
+  for (const key of ["description", "og:description", "twitter:description"])
+    assert.equal(content(key), line, key);
+  assert.equal(content("twitter:card"), "summary_large_image");
+  // Previews need an absolute address, and it must point at a file that is really shipped.
+  const image = content("og:image");
+  assert.equal(content("twitter:image"), image);
+  assert.match(image, /^https:\/\/.+\/og\.png$/);
+  const png = await readFile(new URL("../public/og.png", import.meta.url));
+  assert.equal(png.subarray(1, 4).toString(), "PNG");
+  assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [1200, 630]);
+  assert.ok(
+    png.length < 600 * 1024,
+    "keep it small enough for every app to fetch",
+  );
+});
