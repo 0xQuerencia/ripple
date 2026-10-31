@@ -1,4 +1,4 @@
-import { Sprite } from "../art/Sprite.jsx";
+import { Sprite } from "../ui/Sprite.jsx";
 
 function Sheet({ label, run, tilt }) {
   const touched = run ? new Set(run.events.map((e) => e.targetId)).size : 0;

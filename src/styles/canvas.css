@@ -234,7 +234,7 @@
   stroke-width: 2;
 }
 .link-near .link-base {
-  stroke: #9d9693;
+  stroke: var(--link);
   stroke-opacity: 0.8;
   stroke-width: 2.5;
 }
@@ -259,7 +259,7 @@
 }
 .link-arrow {
   fill: none;
-  stroke: #9d9693;
+  stroke: var(--link);
   stroke-width: 2.5;
   stroke-linecap: square;
   stroke-linejoin: miter;
@@ -426,7 +426,7 @@
 }
 .thinking q {
   quotes: none;
-  color: #f0cdca;
+  color: var(--accent-soft);
 }
 .drop-note {
   position: absolute;
@@ -455,12 +455,12 @@
   padding: 12px 16px;
   border: 5px solid var(--line);
   border-radius: 4px;
-  background: #f4f2f3;
+  background: var(--field);
   color: var(--ink);
   font-size: 30px;
   line-height: 1.1;
   resize: none;
-  outline: 2px solid #ebe7ea;
+  outline: 2px solid var(--field-edge);
   outline-offset: -10px;
 }
 .ask textarea::placeholder {
@@ -469,7 +469,7 @@
 }
 .ask textarea:focus {
   border-color: var(--accent);
-  outline-color: #f6e3e1;
+  outline-color: var(--accent-faint);
 }
 .ask textarea:disabled {
   opacity: 0.55;
@@ -519,20 +519,20 @@
 }
 .live-title b {
   font-weight: 400;
-  color: #f0cdca;
+  color: var(--accent-soft);
 }
 .live-line {
   max-width: none;
   font-size: var(--t-small);
   line-height: 1.1;
-  color: #e6e1e3;
+  color: var(--on-dark);
 }
 .live-line q {
   quotes: none;
-  color: #f0cdca;
+  color: var(--accent-soft);
 }
 .live-progress {
-  color: #cfc8cb;
+  color: var(--on-dark-2);
 }
 .live-ticker {
   display: grid;
@@ -540,7 +540,7 @@
   margin-top: 4px;
   font-size: var(--t-small);
   line-height: 1.1;
-  color: #bdb5b9;
+  color: var(--on-dark-3);
 }
 .live-ticker li {
   overflow: hidden;
@@ -549,7 +549,7 @@
 }
 .live-ticker b {
   font-weight: 400;
-  color: #f0cdca;
+  color: var(--accent-soft);
 }
 .live-ticker .is-newest {
   color: var(--bg);
@@ -584,7 +584,17 @@
 
 @media (max-width: 1180px) {
   /* A short board on a phone: start at the top, scroll if needed, and keep only the first few examples. */
-  .invite { align-content: start; gap: 10px; padding: 26px 16px 20px; overflow-y: auto; pointer-events: auto; }
-  .invite h1 { font-size: 36px; }
-  .examples li:nth-child(n + 5) { display: none; }
+  .invite {
+    align-content: start;
+    gap: 10px;
+    padding: 26px 16px 20px;
+    overflow-y: auto;
+    pointer-events: auto;
+  }
+  .invite h1 {
+    font-size: 36px;
+  }
+  .examples li:nth-child(n + 5) {
+    display: none;
+  }
 }

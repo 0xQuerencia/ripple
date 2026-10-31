@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { layoutRipple, MIN_GAP, ringRadius } from "../src/lib/layout.js";
-import { summarize } from "../src/lib/stats.js";
+import { layoutRipple, MIN_GAP, ringRadius } from "../src/map/layout.js";
+import { summarize } from "../src/notes/stats.js";
 
 const origin = { targetId: "o", sourceId: null, round: 0 };
 const ripple = () => {

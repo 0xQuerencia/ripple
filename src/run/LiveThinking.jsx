@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Sprite } from "../art/Sprite.jsx";
+import { Sprite } from "../ui/Sprite.jsx";
 import { RIPPLE_LIMITS } from "../../shared/ripple.mjs";
 
 const TICK_MS = 500;

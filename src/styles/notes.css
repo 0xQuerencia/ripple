@@ -119,19 +119,19 @@
   line-height: 1;
 }
 .steps > li:nth-child(5n + 1) {
-  --c: #db9591;
+  --c: var(--accent);
 }
 .steps > li:nth-child(5n + 2) {
-  --c: #dbaf91;
+  --c: var(--tan);
 }
 .steps > li:nth-child(5n + 3) {
-  --c: #97db91;
+  --c: var(--green);
 }
 .steps > li:nth-child(5n + 4) {
-  --c: #91a4db;
+  --c: var(--blue);
 }
 .steps > li:nth-child(5n + 5) {
-  --c: #b991db;
+  --c: var(--purple);
 }
 .step {
   display: grid;

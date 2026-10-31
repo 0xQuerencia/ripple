@@ -1,4 +1,4 @@
-import { Sprite } from "../art/Sprite.jsx";
+import { Sprite } from "../ui/Sprite.jsx";
 import { CERTAINTY_TEXT } from "./FieldNotes.jsx";
 
 export function JournalView({ visible, onOpen }) {

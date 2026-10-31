@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Sprite } from "../art/Sprite.jsx";
+import { Sprite } from "./Sprite.jsx";
 
 const STEPS = [
   [

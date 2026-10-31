@@ -1,5 +1,5 @@
 import { Handle, Position } from "@xyflow/react";
-import { Sprite } from "../art/Sprite.jsx";
+import { Sprite } from "../ui/Sprite.jsx";
 import { DOMAIN_BY_ID } from "../../shared/world.mjs";
 
 const CENTER = {
@@ -20,7 +20,7 @@ const CERTAINTY_LABEL = {
 };
 
 /** One thing the ripple touched: a pixel picture, its name, a ring when it matters, and a note. */
-export function SystemNode({ data }) {
+export function RippleNode({ data }) {
   const { event, isSelected, showTag } = data;
   const isOrigin = event.round === 0;
   const state = isOrigin ? "is-source" : `is-affected sev-${event.severity}`;

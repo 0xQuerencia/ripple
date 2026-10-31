@@ -1,22 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ReactFlow, useNodesState } from "@xyflow/react";
-import { SystemNode } from "./SystemNode.jsx";
+import { RippleNode } from "./RippleNode.jsx";
 import { LinkEdge } from "./LinkEdge.jsx";
-import { AskBox } from "./AskBox.jsx";
-import { Jiggle } from "./Jiggle.jsx";
-import { layoutRipple } from "../lib/layout.js";
-import { EXAMPLES } from "../lib/examples.js";
+import { AskBox } from "../ask/AskBox.jsx";
+import { Jiggle } from "../ui/Jiggle.jsx";
+import { layoutRipple } from "./layout.js";
+import { buildEdges, buildNodes, placedEvents, traceTo } from "./graph.js";
+import { EXAMPLES } from "../ask/examples.js";
 import { CAUSES } from "../../shared/world.mjs";
-import { getAncestry } from "../../shared/scenario.mjs";
 
-const NODE_TYPES = { system: SystemNode };
+const NODE_TYPES = { system: RippleNode };
 const EDGE_TYPES = { link: LinkEdge };
-const NODE = { width: 124, height: 112 };
 const FIT = {
   padding: { top: "96px", right: "64px", bottom: "72px", left: "64px" },
   maxZoom: 1,
 };
-const RECENT = 1;
 // While Gemma is working a panel sits over the top of the map, so keep the ripple below it.
 const fitOptions = (busy) => ({
   ...FIT,
@@ -40,37 +38,15 @@ export function WorldCanvas({
   const [dragging, setDragging] = useState(false);
 
   const spots = useMemo(() => layoutRipple(visible), [visible]);
-  const placed = useMemo(
-    () => visible.filter((e) => e.targetId && spots.has(e.targetId)),
-    [visible, spots],
-  );
+  const placed = useMemo(() => placedEvents(visible, spots), [visible, spots]);
   const trail = useMemo(
-    () => (focusedEventId ? getAncestry(visible, focusedEventId) : []),
+    () => traceTo(visible, focusedEventId),
     [visible, focusedEventId],
   );
-
-  const wanted = useMemo(() => {
-    const recent = new Set(placed.slice(-RECENT).map((e) => e.targetId));
-    const onTrail = new Set(trail.map((e) => e.targetId));
-    return placed.map((event) => {
-      const spot = spots.get(event.targetId);
-      return {
-        id: event.targetId,
-        type: "system",
-        position: { x: spot.x - NODE.width / 2, y: spot.y - NODE.height / 2 },
-        ...NODE,
-        draggable: false,
-        data: {
-          event,
-          isSelected: event.targetId === selectedId,
-          showTag:
-            recent.has(event.targetId) ||
-            event.targetId === selectedId ||
-            onTrail.has(event.targetId),
-        },
-      };
-    });
-  }, [placed, spots, selectedId, trail]);
+  const wanted = useMemo(
+    () => buildNodes({ placed, spots, selectedId, trail }),
+    [placed, spots, selectedId, trail],
+  );
 
   // React Flow measures each node and needs those measurements back, or it cannot place any edge.
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -81,28 +57,7 @@ export function WorldCanvas({
     });
   }, [wanted, setNodes]);
 
-  const edges = useMemo(() => {
-    const keys = new Set(placed.map((e) => e.targetId));
-    const onPath = new Set(trail.map((e) => `${e.sourceId}>${e.targetId}`));
-    return placed.slice(1).flatMap((event) =>
-      [event.sourceId, ...(event.alsoFrom ?? [])]
-        .filter((source) => keys.has(source))
-        .map((source, i) => ({
-          id: `${source}>${event.targetId}`,
-          source,
-          target: event.targetId,
-          type: "link",
-          data: {
-            state: trail.length
-              ? onPath.has(`${source}>${event.targetId}`)
-                ? "path"
-                : "dim"
-              : "active",
-            extra: i > 0,
-          },
-        })),
-    );
-  }, [placed, trail]);
+  const edges = useMemo(() => buildEdges({ placed, trail }), [placed, trail]);
 
   // The camera follows the ripple as it grows, until the visitor takes over.
   const first = visible[0]?.id;

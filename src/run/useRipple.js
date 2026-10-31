@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
-import { ApiError, streamRipple } from "../lib/rippleClient.js";
+import { ApiError, streamRipple } from "./rippleClient.js";
 import { guessOrigin } from "../../shared/engine.mjs";
 
 const REVEAL_GAP_MS = 750;

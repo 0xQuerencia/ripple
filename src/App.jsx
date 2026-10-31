@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
-import { Masthead } from "./components/Masthead.jsx";
-import { CauseTray } from "./components/CauseTray.jsx";
-import { WorldCanvas } from "./components/WorldCanvas.jsx";
-import { Playback } from "./components/Playback.jsx";
-import { FieldNotes } from "./components/FieldNotes.jsx";
-import { JournalView } from "./components/JournalView.jsx";
-import { CompareView } from "./components/CompareView.jsx";
-import { HelpDialog } from "./components/HelpDialog.jsx";
-import { LiveThinking } from "./components/LiveThinking.jsx";
-import { useRipple } from "./hooks/useRipple.js";
-import { fetchStatus } from "./lib/rippleClient.js";
+import { Masthead } from "./ui/Masthead.jsx";
+import { CauseTray } from "./ask/CauseTray.jsx";
+import { WorldCanvas } from "./map/WorldCanvas.jsx";
+import { Playback } from "./run/Playback.jsx";
+import { FieldNotes } from "./notes/FieldNotes.jsx";
+import { JournalView } from "./notes/JournalView.jsx";
+import { CompareView } from "./notes/CompareView.jsx";
+import { HelpDialog } from "./ui/HelpDialog.jsx";
+import { LiveThinking } from "./run/LiveThinking.jsx";
+import { useRipple } from "./run/useRipple.js";
+import { fetchStatus } from "./run/rippleClient.js";
 
 const NOTICE_MS = 5000;
 const FRAME_LABEL = {

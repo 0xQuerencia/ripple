@@ -1,8 +1,8 @@
-import { Sprite } from "../art/Sprite.jsx";
-import { Jiggle } from "./Jiggle.jsx";
+import { Sprite } from "../ui/Sprite.jsx";
+import { Jiggle } from "../ui/Jiggle.jsx";
 import { DOMAIN_BY_ID } from "../../shared/world.mjs";
 import { getAncestry } from "../../shared/scenario.mjs";
-import { summarize } from "../lib/stats.js";
+import { summarize } from "./stats.js";
 
 export const CERTAINTY_TEXT = {
   likely: "likely",

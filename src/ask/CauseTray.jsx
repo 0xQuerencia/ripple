@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Sprite } from "../art/Sprite.jsx";
-import { Jiggle } from "./Jiggle.jsx";
+import { Sprite } from "../ui/Sprite.jsx";
+import { Jiggle } from "../ui/Jiggle.jsx";
 import { ToneToggle } from "./ToneToggle.jsx";
 import { CAUSES } from "../../shared/world.mjs";
 import { MAX_CAUSE_TEXT } from "../../shared/ripple.mjs";
