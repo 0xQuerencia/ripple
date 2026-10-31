@@ -167,6 +167,8 @@ export function useRipple({ onProblem }) {
         description: cause.description,
         tone: cause.tone,
       };
+      let started = false;
+      let refused = false;
       try {
         await streamRipple(
           { api, local },
@@ -174,16 +176,28 @@ export function useRipple({ onProblem }) {
             signal: controller.signal,
             onEvent: (event) => {
               if (event.type === "refused") {
+                refused = true;
                 clearRun();
                 dispatch({ type: "reset" });
                 onProblem(event.message);
                 return;
               }
+              if (event.type === "start") started = true;
               queue.current.push(event);
               drain();
             },
           },
         );
+        if (refused) return;
+        // A stream can end without a `done`: a dropped connection, or a host cutting a long answer off.
+        // Never leave the panel ticking forever. Keep what arrived, or report that nothing did.
+        if (started) {
+          queue.current.push({ type: "done" });
+          drain();
+        } else {
+          dispatch({ type: "fail" });
+          onProblem("The answer stopped before it started. Try again.");
+        }
       } catch (error) {
         if (controller.signal.aborted) return;
         dispatch({ type: "fail" });

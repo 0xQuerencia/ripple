@@ -170,3 +170,80 @@ test("long questions are accepted up to the limit and no further", async ({
   await page.locator("#ask-text").fill("x".repeat(400));
   expect((await page.locator("#ask-text").inputValue()).length).toBe(160);
 });
+
+test("an answer that is cut off mid-way still finishes instead of ticking forever", async ({
+  page,
+}) => {
+  await reduceMotion(page);
+  // A host time limit or a dropped connection: the stream ends with no `done` event.
+  const lines = [
+    {
+      type: "start",
+      mode: "gemma",
+      model: "gemma-4-26b-a4b-it",
+      origin: {
+        targetId: "cut",
+        name: "A cut-off cause",
+        area: "society",
+        icon: "clock",
+        known: false,
+        title: "a cut-off cause",
+        tone: "negative",
+        description: "It starts.",
+      },
+    },
+    {
+      type: "effect",
+      effect: {
+        round: 1,
+        sourceId: "cut",
+        targetId: "first",
+        key: "first",
+        name: "First effect",
+        area: "tech",
+        icon: "cpu",
+        known: false,
+        alsoFrom: [],
+        title: "Something happens",
+        explanation: "Because.",
+        who: "everyone",
+        timeframe: "days",
+        certainty: "possible",
+        severity: "low",
+        relation: "",
+      },
+    },
+  ];
+  await page.route("**/api/ripple", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/x-ndjson",
+      body: lines.map((l) => JSON.stringify(l)).join("\n") + "\n",
+    }),
+  );
+  await page.goto("/");
+  await page.getByTestId("cause-blackout").click();
+  await settled(page);
+  await expect(page.locator(".live")).toHaveCount(0);
+  await expect(nodes(page)).toHaveCount(2);
+});
+
+test("an answer that never starts is reported, not left hanging", async ({
+  page,
+}) => {
+  await reduceMotion(page);
+  await page.route("**/api/ripple", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/x-ndjson",
+      body: "",
+    }),
+  );
+  await page.goto("/");
+  await page.getByTestId("cause-blackout").click();
+  await expect(page.locator(".toast")).toContainText(
+    "stopped before it started",
+  );
+  await expect(page.locator(".live")).toHaveCount(0);
+  await expect(page.locator(".invite")).toBeVisible();
+});

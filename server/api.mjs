@@ -27,6 +27,9 @@ function send(res, status, payload) {
 }
 
 async function readJson(req) {
+  // Hosts such as Vercel read and parse the body before the handler runs, leaving nothing to stream.
+  if (req.body !== undefined && req.body !== null)
+    return alreadyParsed(req.body);
   let size = 0;
   const chunks = [];
   for await (const chunk of req) {
@@ -35,8 +38,25 @@ async function readJson(req) {
       throw new HttpError(413, "That request is too large.");
     chunks.push(chunk);
   }
+  return parseObject(Buffer.concat(chunks).toString("utf8"));
+}
+
+function alreadyParsed(body) {
+  const text =
+    typeof body === "string"
+      ? body
+      : Buffer.isBuffer(body)
+        ? body.toString("utf8")
+        : JSON.stringify(body);
+  if (Buffer.byteLength(text) > MAX_BODY_BYTES)
+    throw new HttpError(413, "That request is too large.");
+  return parseObject(text);
+}
+
+/** The body must be a JSON object; anything else is the visitor's mistake. */
+function parseObject(text) {
   try {
-    const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    const body = JSON.parse(text);
     if (body && typeof body === "object" && !Array.isArray(body)) return body;
   } catch {
     /* handled below */

@@ -3,7 +3,8 @@ import { readFile, stat } from "node:fs/promises";
 import { extname, join, normalize, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createApi } from "./api.mjs";
-import { DEFAULT_MODEL } from "./gemma.mjs";
+import { settingsFromEnv } from "./config.mjs";
+import { SECURITY_HEADERS } from "./security.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 try {
@@ -16,24 +17,8 @@ const dist = join(root, "dist");
 const port = Number(process.env.PORT) || 8787;
 const host = process.env.HOST || "0.0.0.0";
 
-/** A non-negative whole number from the environment, or the fallback when it is missing or not one. */
-function intFromEnv(name, fallback) {
-  const value = Number.parseInt(process.env[name] ?? "", 10);
-  return Number.isFinite(value) && value >= 0 ? value : fallback;
-}
-
-const settings = {
-  // How many reverse proxies sit in front of this server (Caddy, nginx, Cloudflare Tunnel...).
-  // Needed so rate limits are per visitor, not per proxy. See docs/DEPLOY.md.
-  trustedProxyHops: intFromEnv("TRUSTED_PROXY_HOPS", 0),
-  limit: intFromEnv("RATE_LIMIT_PER_MINUTE", 12),
-  globalLimit: intFromEnv("GLOBAL_LIMIT_PER_HOUR", 300),
-};
-const api = createApi({
-  apiKey: process.env.GEMINI_API_KEY ?? "",
-  model: process.env.GEMMA_MODEL || DEFAULT_MODEL,
-  ...settings,
-});
+const settings = settingsFromEnv();
+const api = createApi(settings);
 
 const TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -44,14 +29,6 @@ const TYPES = {
   ".woff": "font/woff",
   ".png": "image/png",
   ".json": "application/json",
-};
-const SECURITY_HEADERS = {
-  "Content-Security-Policy":
-    "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'",
-  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
-  "X-Content-Type-Options": "nosniff",
-  "X-Frame-Options": "DENY",
-  "Referrer-Policy": "strict-origin-when-cross-origin",
 };
 
 async function serveStatic(req, res) {
@@ -93,7 +70,7 @@ const server = createServer((req, res) => {
 
 server.listen(port, host, () => {
   console.log(
-    `ripple on http://${host}:${port}  (${process.env.GEMINI_API_KEY ? "Gemma live" : "demo mode: set GEMINI_API_KEY"}, ` +
+    `ripple on http://${host}:${port}  (${settings.apiKey ? "Gemma live" : "demo mode: set GEMINI_API_KEY"}, ` +
       `${settings.trustedProxyHops} trusted proxy hop(s), ${settings.limit}/min per visitor, ${settings.globalLimit}/hour overall)`,
   );
 });

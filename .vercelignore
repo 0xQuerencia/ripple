@@ -1,0 +1,13 @@
+.env
+.env.*
+.git
+.claude
+.impeccable
+graphify-out
+node_modules
+dist
+test-results
+playwright-report
+artifacts
+tests
+docs

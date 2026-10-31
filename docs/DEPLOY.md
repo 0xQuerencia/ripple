@@ -2,6 +2,23 @@
 
 Ripple is one small Node container with no database and nothing to back up. These steps put it behind HTTPS on a server you control, for example at `ripple.example.com`.
 
+## Easiest: Vercel (no server, no open ports)
+
+Vercel serves the built site and runs the API as a streaming function, so there is nothing to host yourself. It also works with any registrar, because you only add one CNAME record.
+
+1. On https://vercel.com choose **Add New, then Project**, and import this repository. The settings come from `vercel.json`, so leave them as they are.
+2. Under **Environment Variables** add `GEMINI_API_KEY`. Leave the rest alone: behind Vercel the hop count defaults to 1.
+3. Deploy, then open the `*.vercel.app` address and ask something. The effects should appear one at a time. If they all arrive at once at the end, streaming is being buffered somewhere.
+4. In **Settings, then Domains**, add `ripple.example.com`. Vercel shows the DNS record to create. At your registrar add it as a **CNAME**: host `ripple`, value what Vercel shows (usually `cname.vercel-dns.com`). The value must be a hostname, never an IP address or a `https://` link. HTTPS certificates are automatic.
+
+Good to know on Vercel:
+
+- **Rate limits are best-effort.** They are counted in memory, and Vercel may run several copies of the function, each with its own count. Set a spending or quota limit on the Gemini key itself as the real protection.
+- **A ripple needs up to two minutes.** `vercel.json` asks for that. If your plan caps functions lower, a long ripple is cut off; the app keeps what arrived and shows it as finished.
+- **Never upload `.env`.** `.vercelignore` keeps it out of command-line deploys, and the key belongs in Vercel's environment variables.
+
+The rest of this page is for running it on a server you control.
+
 ## What you need
 
 - A Linux server with Docker and the Compose plugin.

@@ -71,7 +71,7 @@ Where things live, by area:
 
 ## Deploy
 
-It is one small container with no database. See [`docs/DEPLOY.md`](docs/DEPLOY.md) for Docker, a reverse proxy with HTTPS, and the settings that matter (`TRUSTED_PROXY_HOPS` and the usage limits).
+No database, nothing to back up. The easiest route is Vercel (import the repo, add `GEMINI_API_KEY`, add a CNAME). To run it on your own server there is a Docker image too. See [`docs/DEPLOY.md`](docs/DEPLOY.md) for both, and for the settings that matter (`TRUSTED_PROXY_HOPS` and the usage limits).
 
 ```sh
 docker compose up -d --build
