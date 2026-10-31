@@ -56,7 +56,7 @@ The 12-system starter map, the first validator and the canned demo effects came 
 
 It uses React, React Flow and Vite. The pixel sprites are rendered from [Phosphor Icons](https://phosphoricons.com/) (MIT). The font is [augiepixel](https://jamegam.hackclub.com/fonts/augiepixel.ttf) by Augie Ruben, which is free to use, so thanks. The look is inspired by [jame gam](https://jamegam.hackclub.com/) from Hack Club. I didn't use any of its art or code, and I'm not affiliated with them.
 
-I used AI coding tools (Claude Code) while building this.
+I built this with help from AI coding tools, Codex and Claude Code.
 
 ## License
 
