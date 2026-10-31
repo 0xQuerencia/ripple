@@ -1,8 +1,10 @@
 // Renders the authored vector glyphs (src/art/glyphs.js) into crisp pixel-art PNG sprites.
 // Run: node scripts/make-sprites.mjs   (needs the Playwright Chromium that `npm i` already installs)
 import { chromium } from "playwright-core";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { GLYPHS } from "./glyphs.js";
+import { DOMAINS, SYSTEMS } from "../shared/world.mjs";
+import { ICON_IDS } from "../shared/icons.mjs";
 
 const OUT = new URL("../src/assets/sprites/", import.meta.url);
 const OUTLINE = "#4a4543";
@@ -119,6 +121,112 @@ const jobs = [
     svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${e.view}" shape-rendering="${e.color ? "auto" : "crispEdges"}">${e.svg}</svg>`,
   })),
 ];
+
+// ---- Sprites rendered from the open-source Phosphor icon set (MIT), in the same pixel style ----
+const PHOSPHOR = new URL(
+  "../node_modules/@phosphor-icons/core/assets/duotone/",
+  import.meta.url,
+);
+const PASTELS = [
+  "#ecd878",
+  "#8fd68a",
+  "#86a6e6",
+  "#e49a94",
+  "#b38be0",
+  "#e6c874",
+  "#e49ac8",
+  "#9aa8ee",
+  "#dcaa85",
+  "#a8c2ee",
+];
+
+// Known systems that have no hand-drawn glyph borrow an icon, coloured by their area.
+const SYSTEM_ICON = {
+  renewables: "solar-panel",
+  fuel: "gas-pump",
+  air: "wind",
+  oceans: "waves",
+  waste: "recycle",
+  food: "shopping-cart",
+  restaurants: "fork-knife",
+  fisheries: "fish",
+  pharma: "pill",
+  publichealth: "virus",
+  mental: "brain",
+  rail: "train",
+  aviation: "airplane",
+  shipping: "boat",
+  logistics: "truck",
+  datacenters: "database",
+  cyber: "shield-check",
+  software: "code",
+  ai: "robot",
+  social: "chat-circle",
+  chips: "cpu",
+  banks: "bank",
+  markets: "chart-line-up",
+  jobs: "briefcase",
+  business: "storefront",
+  prices: "receipt",
+  retail: "shopping-bag",
+  housing: "house",
+  culture: "music-notes",
+  media: "newspaper",
+  trust: "handshake",
+  construction: "hard-hat",
+  mining: "hammer",
+  governance: "flag",
+  elections: "check-fat",
+  budget: "piggy-bank",
+  diplomacy: "globe-hemisphere-west",
+  crime: "mask-sad",
+  law: "gavel",
+  military: "shield",
+  emergency: "siren",
+  universities: "student",
+  research: "flask",
+  cybercrime: "skull",
+};
+const CAUSE_ICON = {
+  cyberattack: ["bug", "#e49a94"],
+  pandemic: ["virus", "#8fd68a"],
+  crash: ["chart-line-down", "#e49a94"],
+  heatwave: ["thermometer-hot", "#e6b384"],
+};
+
+async function phosphorSvg(name, fill) {
+  const raw = await readFile(new URL(`${name}-duotone.svg`, PHOSPHOR), "utf8");
+  const body = raw.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
+  const painted = body.replace(
+    /<(path|circle|rect|ellipse|line|polygon|polyline)\b([^>]*?)\/>/g,
+    (_, tag, attrs) => {
+      const bare = attrs.replace(/\sfill="[^"]*"/g, "");
+      return /opacity="0\.2"/.test(bare)
+        ? `<${tag}${bare.replace(/\sopacity="0\.2"/, "")} fill="${fill}"/>`
+        : `<${tag}${bare} fill="${OUTLINE}"/>`;
+    },
+  );
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">${painted}</svg>`;
+}
+const areaColor = (domain) => DOMAINS.find((d) => d.id === domain).color;
+const iconJob = async (id, name, fill) => ({
+  id,
+  w: GRID,
+  h: GRID,
+  svg: await phosphorSvg(name, fill),
+  palette: [OUTLINE, fill],
+});
+
+for (const system of SYSTEMS) {
+  if (FILL[system.id] || !SYSTEM_ICON[system.id]) continue;
+  jobs.push(
+    await iconJob(system.id, SYSTEM_ICON[system.id], areaColor(system.domain)),
+  );
+}
+for (const [id, [name, fill]] of Object.entries(CAUSE_ICON))
+  jobs.push(await iconJob(id, name, fill));
+for (const [i, name] of ICON_IDS.entries())
+  jobs.push(await iconJob(`i-${name}`, name, PASTELS[i % PASTELS.length]));
 
 const browser = await chromium.launch();
 const page = await browser.newPage();
