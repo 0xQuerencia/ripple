@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { assembleChain, buildDemoChain } from "../shared/engine.mjs";
+import {
+  assembleChain,
+  buildDemoChain,
+  MAX_ROUNDS,
+  PER_ROUND,
+} from "../shared/engine.mjs";
 import { EDGE_LIST } from "../shared/world.mjs";
 
 const edgeKey = (e) => `${e.sourceId}>${e.targetId}`;
@@ -76,18 +81,21 @@ test("assembleChain tolerates junk input", () => {
   );
 });
 
-test("assembleChain caps rounds at 3 and effects per round at 3", () => {
+test("assembleChain caps rounds and effects per round", () => {
   const raw = [];
-  for (let r = 1; r <= 5; r++)
+  for (let r = 1; r <= MAX_ROUNDS + 2; r++) {
     raw.push({ round: r, sourceId: "power", targetId: "water" });
+  }
+  const direct = EDGE_LIST.filter((e) => e.source === "power").map(
+    (e) => e.target,
+  );
   raw.push(
-    ...["water", "transport", "health", "industry", "communications"].map(
-      (t) => ({ round: 1, sourceId: "power", targetId: t }),
-    ),
+    ...direct.map((t) => ({ round: 1, sourceId: "power", targetId: t })),
   );
   const chain = assembleChain(raw, { targetId: "power" });
-  assert.ok(chain.filter((e) => e.round === 1).length <= 3);
-  assert.ok(chain.every((e) => e.round <= 3));
+  assert.ok(chain.filter((e) => e.round === 1).length <= PER_ROUND);
+  assert.equal(chain.filter((e) => e.round === 1).length, PER_ROUND);
+  assert.ok(chain.every((e) => e.round <= MAX_ROUNDS));
 });
 
 test("buildDemoChain produces a connected multi-round chain from any system", () => {

@@ -1,4 +1,4 @@
-import { demoEffects } from "./engine.mjs";
+import { buildDemoChain } from "./engine.mjs";
 import { SYSTEM_BY_ID } from "./world.mjs";
 
 /** Build an immutable, replayable scenario from the same world baseline. */
@@ -17,21 +17,13 @@ export function createScenario(cause, target, runId = crypto.randomUUID()) {
       round: 0,
     },
   ];
-  let frontier = [target];
-  const visited = [target];
-  for (let round = 1; round <= 3; round++) {
-    const effects = demoEffects({ frontier, visited, tone: cause.tone });
-    if (!effects.length) break;
-    const batch = effects.map((effect, i) => ({
+  for (const effect of buildDemoChain({ targetId: target, tone: cause.tone })) {
+    const parent = events.find((event) => event.targetId === effect.sourceId);
+    events.push({
       ...effect,
-      id: `${runId}-${round}-${i}`,
-      parentEventId: events.find((event) => event.targetId === effect.sourceId)
-        .id,
-      round,
-    }));
-    events.push(...batch);
-    frontier = batch.map((event) => event.targetId);
-    visited.push(...frontier);
+      id: `${runId}-${effect.round}-${events.length}`,
+      parentEventId: parent.id,
+    });
   }
   return events;
 }

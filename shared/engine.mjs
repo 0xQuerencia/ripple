@@ -1,4 +1,9 @@
-import { SYSTEM_BY_ID, EDGE_LIST } from "./world.mjs";
+import { SYSTEMS, SYSTEM_BY_ID, EDGE_LIST } from "./world.mjs";
+
+export const MAX_ROUNDS = 4;
+export const PER_ROUND = 5;
+export const TIMEFRAMES = ["hours", "days", "weeks", "months", "years"];
+const DEMO_TIMEFRAMES = ["days", "weeks", "months", "years"];
 
 const PER_SOURCE = {
   "power-water": [
@@ -101,6 +106,8 @@ export function validateEffects(
       explanation:
         clean(e.explanation, 250) ||
         `A possible effect via ${link.relation.toLowerCase()}.`,
+      timeframe: TIMEFRAMES.includes(e.timeframe) ? e.timeframe : "weeks",
+      who: clean(e.who, 80),
       certainty: ["likely", "possible", "speculative"].includes(e.certainty)
         ? e.certainty
         : "possible",
@@ -148,8 +155,6 @@ export function demoEffects({
   );
 }
 
-const MAX_ROUNDS = 3;
-
 /**
  * Incremental validator for a ripple. Effects arrive one at a time (streamed from Gemma), in round order.
  * Round N may only grow from systems reached in round N-1, so what comes out is always a connected,
@@ -158,7 +163,7 @@ const MAX_ROUNDS = 3;
 export function createChainBuilder({
   targetId,
   maxRounds = MAX_ROUNDS,
-  perRound = 3,
+  perRound = PER_ROUND,
 }) {
   const visited = [targetId];
   let frontier = [targetId];
@@ -192,7 +197,7 @@ export function createChainBuilder({
 /** Validate a complete list of proposed effects in one go. */
 export function assembleChain(
   raw,
-  { targetId, maxRounds = MAX_ROUNDS, perRound = 3 } = {},
+  { targetId, maxRounds = MAX_ROUNDS, perRound = PER_ROUND } = {},
 ) {
   if (!Array.isArray(raw)) return [];
   const builder = createChainBuilder({ targetId, maxRounds, perRound });
@@ -209,11 +214,45 @@ export function buildDemoChain({ targetId, tone = "negative" }) {
   let frontier = [targetId];
   const visited = [targetId];
   for (let round = 1; round <= MAX_ROUNDS; round++) {
-    const batch = demoEffects({ frontier, visited, tone });
+    const batch = demoEffects({ frontier, visited, tone, max: PER_ROUND - 1 });
     if (!batch.length) break;
-    raw.push(...batch.map((e) => ({ ...e, round })));
+    raw.push(
+      ...batch.map((e) => ({
+        ...e,
+        round,
+        timeframe: DEMO_TIMEFRAMES[round - 1],
+      })),
+    );
     frontier = batch.map((e) => e.targetId);
     visited.push(...frontier);
   }
   return assembleChain(raw, { targetId });
+}
+
+const WORD = /[a-z0-9]+/g;
+
+/**
+ * Best-guess starting system for free text, by matching its words to system names and aliases.
+ * Only used when Gemma is unavailable; Gemma normally chooses where a what-if begins.
+ */
+export function guessOrigin(text) {
+  const words = new Set(
+    String(text ?? "")
+      .toLowerCase()
+      .match(WORD) ?? [],
+  );
+  let best = SYSTEM_BY_ID.people;
+  let bestScore = 0;
+  for (const system of SYSTEMS) {
+    const keys =
+      `${system.id} ${system.name} ${system.aliases}`
+        .toLowerCase()
+        .match(WORD) ?? [];
+    const score = keys.filter((key) => key.length > 2 && words.has(key)).length;
+    if (score > bestScore) {
+      best = system;
+      bestScore = score;
+    }
+  }
+  return best.id;
 }

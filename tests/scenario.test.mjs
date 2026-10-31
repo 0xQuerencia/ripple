@@ -17,7 +17,7 @@ test("every cause produces bounded, traceable effects without duplicate systems"
           (e) => e.source === event.sourceId && e.target === event.targetId,
         ),
       );
-      assert.ok(event.round <= 3);
+      assert.ok(event.round <= 4);
       const chain = getAncestry(events, event.id);
       assert.equal(chain[0].id, events[0].id);
       assert.equal(chain.at(-1).id, event.id);

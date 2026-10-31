@@ -1,11 +1,51 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { demoEffects, validateEffects } from "../shared/engine.mjs";
+import {
+  demoEffects,
+  validateEffects,
+  guessOrigin,
+} from "../shared/engine.mjs";
 import { SYSTEMS, EDGE_LIST } from "../shared/world.mjs";
 
-test("world contains 12 connected systems", () => {
-  assert.equal(SYSTEMS.length, 12);
-  assert.ok(EDGE_LIST.length >= 20);
+test("the world is big, and every link joins two known systems", () => {
+  assert.ok(SYSTEMS.length >= 50);
+  assert.ok(EDGE_LIST.length >= 150);
+  const ids = new Set(SYSTEMS.map((s) => s.id));
+  assert.equal(ids.size, SYSTEMS.length);
+  assert.equal(new Set(EDGE_LIST.map((e) => e.id)).size, EDGE_LIST.length);
+  for (const e of EDGE_LIST) {
+    assert.ok(ids.has(e.source) && ids.has(e.target) && e.source !== e.target);
+  }
+  for (const s of SYSTEMS) {
+    assert.ok(
+      EDGE_LIST.some((e) => e.source === s.id),
+      `${s.id} leads nowhere`,
+    );
+  }
+});
+
+test("free text maps to a sensible starting system", () => {
+  assert.equal(guessOrigin("hackers die"), "cyber");
+  assert.equal(guessOrigin("all the bees disappear"), "nature");
+  assert.equal(guessOrigin("a huge internet outage"), "communications");
+  assert.equal(guessOrigin("zzz qqq"), "people");
+  assert.equal(guessOrigin(undefined), "people");
+});
+
+test("effects carry bounded timeframe and who-feels-it fields", () => {
+  const [effect] = validateEffects(
+    [
+      {
+        sourceId: "power",
+        targetId: "water",
+        timeframe: "centuries",
+        who: "x".repeat(300),
+      },
+    ],
+    { frontier: ["power"], visited: ["power"] },
+  );
+  assert.equal(effect.timeframe, "weeks");
+  assert.equal(effect.who.length, 80);
 });
 
 test("blackout demo has plausible direct downstream effects", () => {
