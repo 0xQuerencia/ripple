@@ -6,7 +6,10 @@ const tally = (items, key, values) =>
     values.map((v) => [v, items.filter((e) => e[key] === v).length]),
   );
 
-/** The big picture of a ripple: how far it reached and which parts of life it touched. */
+/**
+ * The big picture of a ripple: how far it reached and which parts of life it touched.
+ * @param {import("../../shared/types.js").RippleEvent[]} events the cause first, then its effects
+ */
 export function summarize(events) {
   const effects = events.slice(1);
   const counts = new Map();

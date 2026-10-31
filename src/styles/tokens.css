@@ -22,19 +22,19 @@
   --btn: #5b5755;
 
   /* surfaces and tints that are not the page colour */
-  --ink-strong: #2f2b29;      /* the wordmark */
-  --field: #f4f2f3;           /* text boxes */
+  --ink-strong: #2f2b29; /* the wordmark */
+  --field: #f4f2f3; /* text boxes */
   --field-edge: #ebe7ea;
-  --track: #f0ecee;           /* slider track */
+  --track: #f0ecee; /* slider track */
   --polaroid-face: #f6f3f4;
-  --accent-soft: #f0cdca;     /* selection, quoted text on dark */
+  --accent-soft: #f0cdca; /* selection, quoted text on dark */
   --accent-faint: #f6e3e1;
-  --link: #9d9693;            /* faint lines and arrows */
-  --on-dark: #e6e1e3;         /* text on the dark (--btn) panels, brightest to dimmest */
+  --link: #9d9693; /* faint lines and arrows */
+  --on-dark: #e6e1e3; /* text on the dark (--btn) panels, brightest to dimmest */
   --on-dark-2: #cfc8cb;
   --on-dark-3: #bdb5b9;
   --on-dark-edge: #8b8683;
-  --live: #6fb96a;            /* "Gemma is live" */
+  --live: #6fb96a; /* "Gemma is live" */
   --scrim: rgb(80 75 73 / 0.35);
 
   --font: augiepixel, sans-serif;

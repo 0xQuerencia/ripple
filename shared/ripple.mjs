@@ -43,6 +43,8 @@ export const slugify = (text) =>
  * Turn whatever the model said about a node into a safe node. A key that matches a known system
  * (see world.mjs) always uses that system's name, area and picture, so the same idea looks the same
  * every time. Anything else keeps its own short name, with the area and icon checked against fixed lists.
+ * @param {unknown} raw whatever the model said about a node
+ * @returns {import("./types.js").RippleNode | null} null when it is not usable
  */
 export function resolveNode(raw) {
   if (!raw || typeof raw !== "object") return null;
@@ -69,6 +71,9 @@ export function resolveNode(raw) {
  * It cannot check the facts, but it guarantees the structure: every effect follows from a node
  * that already exists and was reached in an earlier round, no node appears twice, rounds do not
  * skip, and the whole ripple stays inside RIPPLE_LIMITS. `push` returns the accepted effect or null.
+ * @param {unknown} rawOrigin the cause, as the model or a preset described it
+ * @param {{ rounds: number, perRound: number, nodes: number }} [limits]
+ * @returns {{ origin: import("./types.js").RippleNode, count: () => number, push: (raw: unknown) => import("./types.js").RippleEffect | null } | null} null when the origin is unusable
  */
 export function createRippleBuilder(rawOrigin, limits = RIPPLE_LIMITS) {
   const origin = resolveNode(rawOrigin);

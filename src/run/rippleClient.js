@@ -84,6 +84,8 @@ async function offlineRipple(
 /**
  * Ask the server for a ripple and forward each streamed event. A missing or broken server (404, 5xx,
  * network error) degrades to the offline demo; a rejected request (400, 429) is the user's to fix.
+ * @param {{ api: object, local: object }} request what to send the server, and what to run offline if there is no server
+ * @param {{ signal: AbortSignal, onEvent: (event: import("../../shared/types.js").StreamEvent) => void }} handlers
  */
 export async function streamRipple(request, { signal, onEvent }) {
   let response;

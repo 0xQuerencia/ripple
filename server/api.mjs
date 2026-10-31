@@ -122,6 +122,20 @@ const otherModel = (model) =>
   model === LARGE_MODEL ? DEFAULT_MODEL : LARGE_MODEL;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * The HTTP API: GET /api/status and POST /api/ripple (a stream of StreamEvent lines, see
+ * shared/types.js). Everything a visitor can send is validated here, and every failure ends in an
+ * answer the interface can show: Gemma is retried, then the offline demo steps in and says so.
+ *
+ * @param {object} options
+ * @param {string} options.apiKey            Gemini key; empty means demo mode only
+ * @param {string} options.model             preferred Gemma model
+ * @param {typeof fetch} [options.fetchImpl] replaceable so tests never touch the network
+ * @param {number} [options.limit]           questions per visitor per window
+ * @param {number} [options.trustedProxyHops] reverse proxies in front of this server (see network.mjs)
+ * @param {number} [options.globalLimit]     Gemma calls across all visitors per hour
+ * @returns {(req: import("node:http").IncomingMessage, res: import("node:http").ServerResponse, next?: () => void) => Promise<void>}
+ */
 export function createApi({
   apiKey,
   model,

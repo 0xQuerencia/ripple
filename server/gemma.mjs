@@ -141,6 +141,8 @@ async function* lines(texts) {
 /**
  * Stream a ripple from Gemma. Yields {type:'origin'|'effect'|'summary'|'refused'}. Every effect has
  * already passed the ripple validator, so callers can forward it to the UI as-is.
+ * @param {{ text: string, description?: string, targetId?: string | null, tone?: import("../shared/types.js").Tone }} input
+ * @returns {AsyncGenerator<{ type: "origin", node: import("../shared/types.js").RippleNode, description: string } | { type: "effect", effect: import("../shared/types.js").RippleEffect } | { type: "summary", text: string } | { type: "refused", message: string }>}
  */
 export async function* streamGemma(
   input,

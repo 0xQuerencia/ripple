@@ -232,7 +232,11 @@ input {
   background-size: 50% 100%;
   background-repeat: repeat-x;
   background-image:
-    radial-gradient(19% 130% at 84.29% 120%, var(--pink) 0% 18%, transparent 74%),
+    radial-gradient(
+      19% 130% at 84.29% 120%,
+      var(--pink) 0% 18%,
+      transparent 74%
+    ),
     radial-gradient(40% 130% at -1.43% 120%, var(--accent), transparent 72%),
     radial-gradient(40% 130% at 12.86% 120%, var(--tan), transparent 72%),
     radial-gradient(40% 130% at 27.14% 120%, var(--yellow), transparent 72%),
