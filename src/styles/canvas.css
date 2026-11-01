@@ -13,6 +13,18 @@
     url("../assets/cursor-pointer.png") 2 2,
     grab;
 }
+.canvas .react-flow__pane,
+.canvas .react-flow__pane.draggable {
+  cursor:
+    url("../assets/cursor-grab.png") 16 16,
+    grab;
+}
+.canvas .react-flow__pane.dragging,
+.canvas .react-flow__pane.dragging.draggable {
+  cursor:
+    url("../assets/cursor-grabbing.png") 16 16,
+    grabbing;
+}
 .canvas .react-flow__attribution {
   background: transparent;
   font-size: 14px;

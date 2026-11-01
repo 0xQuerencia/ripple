@@ -12,23 +12,17 @@ export const CERTAINTY_TEXT = {
 
 function Provenance({ run }) {
   if (run.status === "idle")
-    return (
-      <p className="provenance">
-        a model of possibilities, not a prediction of the future.
-      </p>
-    );
+    return <p className="provenance">possibilities, not predictions.</p>;
   return (
     <div className="provenance">
       <p>
         {run.mode === "gemma" ? (
           <>
-            drawn by <strong>{run.model}</strong>. it can be wrong: every effect
-            here is a possibility.
+            drawn by <strong>{run.model}</strong>. it can be wrong.
           </>
         ) : (
           <>
-            from the <strong>offline demo engine</strong>, not gemma. fixed
-            rules over a small known map.
+            from the <strong>offline demo</strong>, not gemma.
           </>
         )}
       </p>
@@ -89,12 +83,7 @@ function BigPicture({ visible }) {
       </ul>
       <p className="meta">
         {s.severity.high} big, {s.severity.medium} medium, {s.severity.low}{" "}
-        small. soonest first:{" "}
-        {Object.entries(s.timeframe)
-          .filter(([, n]) => n)
-          .map(([when, n]) => `${n} in ${when}`)
-          .join(", ")}
-        .
+        small.
       </p>
     </section>
   );
@@ -145,10 +134,7 @@ export function FieldNotes({
           <h2>
             <Jiggle>field notes</Jiggle>
           </h2>
-          <p>
-            ask a question and every thing it touches gets a note here: who
-            feels it, how soon, and how it got there.
-          </p>
+          <p>ask a question and each thing it touches gets a note here.</p>
         </section>
       )}
 
@@ -177,11 +163,7 @@ export function FieldNotes({
           <p className="summary">“{run.summary}”</p>
         )}
         {visible.length === 0 ? (
-          <p className="empty">
-            nothing has happened. yet.
-            <br />
-            <span>ask anything and the story starts here.</span>
-          </p>
+          <p className="empty">nothing has happened. yet.</p>
         ) : (
           <ol className="steps" aria-live="polite">
             {visible.map((event, index) => (
@@ -193,7 +175,7 @@ export function FieldNotes({
                   onClick={() => onInspect(event)}
                 >
                   <span className="step-title">{event.title}</span>
-                  <span className="step-meta">
+                  <span className="step-meta" hidden={event.id !== focused?.id}>
                     {index === 0 ? "it started with" : `round ${event.round},`}{" "}
                     {event.name}
                   </span>
