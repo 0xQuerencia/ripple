@@ -134,7 +134,7 @@
   transform: scale(0.94);
 }
 .node-name {
-  font-size: 24px;
+  font-size: 28px;
   line-height: 1;
   text-decoration: underline;
   text-decoration-color: transparent;
@@ -348,9 +348,9 @@
   margin-left: -50px;
 }
 .node-name {
-  max-width: 124px;
+  max-width: 150px;
   text-align: center;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   text-decoration-color: var(--area, transparent);
   text-decoration-thickness: 4px;
   text-wrap: balance;
@@ -587,8 +587,8 @@
 
 .node-name {
   overflow-wrap: break-word;
-  font-size: 22px;
-  max-width: 132px;
+  font-size: 26px;
+  max-width: 150px;
 }
 .live-title {
   font-size: 24px;

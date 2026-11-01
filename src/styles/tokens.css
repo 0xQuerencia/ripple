@@ -7,7 +7,7 @@
 :root {
   --bg: #fbfbfb;
   --ink: #504b49;
-  --ink-2: #6d6764; /* secondary text, 5:1 on the page */
+  --ink-2: #5a5552; /* secondary text, 5:1 on the page */
   --accent: #db9591; /* decorative: annotations, strokes */
   --accent-text: #a8524d; /* the same hue, dark enough for text */
   --tan: #dbaf91;
@@ -40,7 +40,7 @@
   --font: augiepixel, sans-serif;
   --scale: 0.9;
   --t-body: 21px;
-  --t-small: 18px;
+  --t-small: 21px;
   --t-h2: 31px;
   --t-title: 58px;
   --step: steps(4, end);

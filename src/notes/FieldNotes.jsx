@@ -54,6 +54,8 @@ function Links({ event, visible }) {
   );
 }
 
+const TOP_AREAS = 5;
+
 function BigPicture({ visible }) {
   const s = summarize(visible);
   if (!s.total) return null;
@@ -67,7 +69,7 @@ function BigPicture({ visible }) {
         {s.areas.length === 1 ? "area" : "areas"} of life.
       </p>
       <ul className="areas">
-        {s.areas.map((area) => (
+        {s.areas.slice(0, TOP_AREAS).map((area) => (
           <li key={area.id}>
             <span className="area-name">{area.name}</span>
             <span
@@ -81,6 +83,9 @@ function BigPicture({ visible }) {
           </li>
         ))}
       </ul>
+      {s.areas.length > TOP_AREAS && (
+        <p className="meta">+{s.areas.length - TOP_AREAS} more areas</p>
+      )}
       <p className="meta">
         {s.severity.high} big, {s.severity.medium} medium, {s.severity.low}{" "}
         small.

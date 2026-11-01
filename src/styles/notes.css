@@ -227,3 +227,7 @@
   overflow-wrap: anywhere;
   line-height: 1;
 }
+
+.step-meta[hidden] {
+  display: none;
+}
