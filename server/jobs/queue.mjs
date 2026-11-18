@@ -43,6 +43,11 @@ export class SqliteJobQueue {
     return toJob(this.db.prepare("SELECT * FROM jobs WHERE id = ? AND owner_id = ?").get(id, ownerId));
   }
 
+  getByRun(ownerId, runId) {
+    return toJob(this.db.prepare("SELECT * FROM jobs WHERE owner_id = ? AND run_id = ? ORDER BY created_at DESC LIMIT 1")
+      .get(ownerId, runId));
+  }
+
   claim(workerId, { now = Date.now(), leaseMs = 30_000 } = {}) {
     if (!workerId || !boundedInteger(leaseMs, 1, 600_000)) throw new Error("Invalid lease");
     this.db.exec("BEGIN IMMEDIATE");

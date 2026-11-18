@@ -8,13 +8,17 @@ const json = (res, code, value) => {
   res.end(JSON.stringify(value));
 };
 
-function isLocal(req) {
+export function isLocal(req) {
   const address = req.socket?.remoteAddress ?? "";
   const host = String(req.headers?.host ?? "").split(":")[0].replace(/^\[|\]$/g, "");
   const origin = req.headers?.origin;
   const remote = address === "::1" || address === "127.0.0.1" || address.startsWith("::ffff:127.");
-  return remote && ["localhost", "127.0.0.1", "::1"].includes(host) &&
-    (!origin || new URL(origin).host === req.headers.host);
+  try {
+    return remote && ["localhost", "127.0.0.1", "::1"].includes(host) &&
+      (!origin || new URL(origin).host === req.headers.host);
+  } catch {
+    return false;
+  }
 }
 
 async function readBody(req) {

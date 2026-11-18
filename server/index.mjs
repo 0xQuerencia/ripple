@@ -5,6 +5,9 @@ import { fileURLToPath } from "node:url";
 import { createApi } from "./api.mjs";
 import { createProjectApi } from "./projects/api.mjs";
 import { SqliteEventStore } from "./storage/sqlite.mjs";
+import { SqliteJobQueue } from "./jobs/queue.mjs";
+import { createSimulationApi } from "./simulation/api.mjs";
+import { startLocalSimulationWorker } from "./simulation/localWorker.mjs";
 import { settingsFromEnv } from "./config.mjs";
 import { SECURITY_HEADERS } from "./security.mjs";
 
@@ -23,6 +26,9 @@ const settings = settingsFromEnv();
 const api = createApi(settings);
 const store = new SqliteEventStore(process.env.RIPPLE_DB_PATH || "./ripple-local.sqlite");
 const projectApi = createProjectApi(store);
+const queue = new SqliteJobQueue(store);
+const simulationApi = createSimulationApi(store, queue);
+const stopSimulationWorker = startLocalSimulationWorker(store, queue);
 
 const TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -64,12 +70,14 @@ async function serveStatic(req, res) {
 }
 
 const server = createServer((req, res) => {
-  projectApi(req, res, () =>
-    api(req, res, () =>
+  simulationApi(req, res, () =>
+    projectApi(req, res, () =>
+      api(req, res, () =>
       serveStatic(req, res).catch(() => {
         res.writeHead(500);
         res.end();
       }),
+    ),
     ),
   );
 });
@@ -86,7 +94,8 @@ const SHUTDOWN_GRACE_MS = 10_000;
 for (const signal of ["SIGTERM", "SIGINT"]) {
   process.on(signal, () => {
     console.log(`${signal} received, shutting down`);
-    server.close(() => process.exit(0));
+    stopSimulationWorker();
+    server.close(() => { store.close(); process.exit(0); });
     setTimeout(() => process.exit(0), SHUTDOWN_GRACE_MS).unref();
   });
 }
