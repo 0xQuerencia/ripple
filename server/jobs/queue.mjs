@@ -53,8 +53,7 @@ export class SqliteJobQueue {
 
   claim(workerId, { now = Date.now(), leaseMs = 30_000 } = {}) {
     if (!workerId || !boundedInteger(leaseMs, 1, 600_000)) throw new Error("Invalid lease");
-    this.db.exec("BEGIN IMMEDIATE");
-    try {
+    return this.store.transaction(() => {
       this.db.prepare(
         "UPDATE jobs SET status='failed', error_code='retry_limit', lease_owner=NULL WHERE status='running' AND lease_until <= ? AND attempts >= max_attempts"
       ).run(now);
@@ -62,18 +61,13 @@ export class SqliteJobQueue {
         "SELECT * FROM jobs WHERE status='queued' OR (status='running' AND lease_until <= ?) ORDER BY created_at, id LIMIT 1"
       ).get(now);
       if (!row) {
-        this.db.exec("COMMIT");
         return null;
       }
       this.db.prepare(
         "UPDATE jobs SET status='running', lease_owner=?, lease_until=?, attempts=attempts+1, updated_at=? WHERE id=?"
       ).run(workerId, now + leaseMs, now, row.id);
-      this.db.exec("COMMIT");
       return this.get(row.owner_id, row.id);
-    } catch (error) {
-      this.db.exec("ROLLBACK");
-      throw error;
-    }
+    });
   }
 
   heartbeat(ownerId, id, workerId, { now = Date.now(), leaseMs = 30_000 } = {}) {
