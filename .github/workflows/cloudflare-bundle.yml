@@ -1,0 +1,43 @@
+name: Bundle Cloudflare runtime
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'workers/**'
+      - 'server/**'
+      - 'shared/**'
+      - '.github/workflows/cloudflare-bundle.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Bundle worker for Cloudflare API upload
+        run: ./node_modules/.bin/esbuild workers/index.mjs --bundle --platform=browser --format=esm --target=es2022 --external:cloudflare:workers --external:node:* --outfile=/tmp/ripple-worker.mjs
+      - name: Publish build artifact to cf-build branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin cf-build || true
+          git switch -C cf-build
+          mkdir -p cloudflare
+          cp /tmp/ripple-worker.mjs cloudflare/worker.mjs
+          git add cloudflare/worker.mjs
+          if git diff --cached --quiet; then
+            echo "No bundle changes"
+            exit 0
+          fi
+          git commit -m "build: Cloudflare runtime from ${GITHUB_SHA}"
+          git push --force-with-lease origin cf-build
