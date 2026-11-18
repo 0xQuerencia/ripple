@@ -55,11 +55,19 @@ export function createTickExecutor({ store, getScenario, proposer = ruleProposal
     const result = applyActionBatch({
       world, agents, proposals, tick, runId: run.id, priorEvents: prior
     });
-    const emissions = [...result.emissions, {
-      actorId: "engine", type: "tick-summary",
-      payload: { accepted: result.accepted.length, rejected: result.rejected.length,
-        visibility: "public" }
-    }];
+    const emissions = [
+      ...result.emissions,
+      {
+        actorId: "engine", type: "tick-actions",
+        payload: { visibility: "private", audience: ["engine"],
+          acceptedActions: result.accepted, rejectedActions: result.rejected }
+      },
+      {
+        actorId: "engine", type: "tick-summary",
+        payload: { accepted: result.accepted.length, rejected: result.rejected.length,
+          visibility: "public" }
+      }
+    ];
     let nextSeq = seq;
     const at = new Date().toISOString();
     const events = emissions.map((emission) => {
