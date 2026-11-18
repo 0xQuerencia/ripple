@@ -54,8 +54,9 @@ test("append is idempotent and rejects gaps or invalid causal parents", () => {
     assert.throws(() => store.appendEvents("alice", "run-1", [event("b", 3, 1)]), /sequence gap/);
     assert.throws(() => store.appendEvents("alice", "run-1", [event("b", 2, 1, ["missing"])]), /Unknown event parent/);
     assert.throws(() => store.appendEvents("alice", "run-1", [event("a", 1, 100)]), /Conflicting event/);
-    assert.throws(() => store.appendEvents("alice", "run-1", [event("b", 2, 1)], checkpoint(2, { total: 999 })),
-      /Replay hash mismatch|Checkpoint hash mismatch/);
+    const badCheckpoint = { ...checkpoint(2, { total: 999 }), stateHash: "0".repeat(64) };
+    assert.throws(() => store.appendEvents("alice", "run-1", [event("b", 2, 1)], badCheckpoint),
+      /Checkpoint hash mismatch/);
     assert.equal(store.readEvents("alice", "run-1").length, 1);
   } finally {
     store.close();
