@@ -1,3 +1,4 @@
+import { proposeClaims, flagConflicts } from "../evidence/claims.mjs";
 import { parseSource, makeSource } from "../evidence/parser.mjs";
 import { randomUUID } from "node:crypto";
 
@@ -103,6 +104,26 @@ export function createProjectApi(store) {
         if (parts.length === 4 && parts[3] === "runs") {
           if (req.method === "GET") return json(res, 200, { runs: store.listRuns(OWNER, projectId) });
           if (req.method === "POST") return json(res, 201, { run: saveQuickRun(store, projectId, await readBody(req)) });
+        }
+        if (parts.length === 4 && parts[3] === "claims" && req.method === "GET")
+          return json(res, 200, { claims: flagConflicts(store.listClaims(OWNER, projectId)) });
+        if (parts.length === 5 && parts[3] === "claims") {
+          if (req.method === "PATCH") {
+            const input = await readBody(req);
+            const claim = store.updateClaim(OWNER, projectId, parts[4], input);
+            return claim ? json(res, 200, { claim })
+              : json(res, 404, { error: "Claim not found" });
+          }
+          if (req.method === "DELETE")
+            return json(res, 200, { deleted: store.deleteClaim(OWNER, projectId, parts[4]) });
+        }
+        if (parts.length === 6 && parts[3] === "sources" &&
+            parts[5] === "extract" && req.method === "POST") {
+          const record = store.getSource(OWNER, projectId, parts[4]);
+          if (!record) return json(res, 404, { error: "Source not found" });
+          const claims = store.putClaims(OWNER, projectId,
+            proposeClaims(record.source, record.parsed));
+          return json(res, 200, { claims: flagConflicts(claims) });
         }
         if (parts.length === 4 && parts[3] === "sources") {
           if (req.method === "GET") return json(res, 200, { sources: store.listSources(OWNER, projectId) });
