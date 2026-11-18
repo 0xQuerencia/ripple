@@ -238,7 +238,7 @@ export class SqliteEventStoreCore {
       return span?.sourceId + ":" + (span?.row ?? span?.charStart);
     }));
     const insert = this.db.prepare("INSERT INTO claims VALUES (?, ?, ?, ?)");
-    return this.transaction(() => {
+    this.transaction(() => {
       for (const claim of claims) {
         validateClaim(claim);
         if (claim.ownerId !== ownerId || claim.projectId !== projectId)
