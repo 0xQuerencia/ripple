@@ -62,8 +62,13 @@ test("saved simulated decisions have a graph, report and comparable outcomes", a
   await expect(page.getByRole("button", { name: "export JSON" })).toBeVisible();
 
   await expect(page.getByLabel("Compare alternative").locator("option")).toHaveCount(3);
+  const runList = await request.get(runRoot);
+  expect(runList.ok()).toBe(true);
+  const alternative = (await runList.json()).runs.find((run) =>
+    run.interventionId === "option-0");
+  expect(alternative).toBeTruthy();
   await page.getByLabel("Compare baseline").selectOption(baseline.run.id);
-  await page.getByLabel("Compare alternative").selectOption({ index: 2 });
+  await page.getByLabel("Compare alternative").selectOption(alternative.id);
   await page.getByRole("button", { name: "compare runs" }).click();
   await expect(page.getByRole("region", { name: "Run comparison" }))
     .toContainText("currentPrice");
