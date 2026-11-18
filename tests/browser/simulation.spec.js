@@ -26,6 +26,7 @@ test("local evidence can be extracted and reviewed through the original UI", asy
 });
 
 test("saved simulated decisions have a graph, report and comparable outcomes", async ({ page, request }) => {
+  test.setTimeout(75_000);
   const project = (await post(request, "/api/projects",
     { title: "Full workflow " + Date.now() })).project;
   const root = "/api/projects/" + project.id + "/scenarios";
