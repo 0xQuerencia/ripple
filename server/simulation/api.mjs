@@ -1,3 +1,4 @@
+import { makeRunReport, formatReportMarkdown } from "./reports.mjs";
 import { compareSimulationRuns, forkScenarioAtCheckpoint } from "../../shared/simulation/diff.mjs";
 import { randomUUID } from "node:crypto";
 import { isLocal } from "../projects/api.mjs";
@@ -140,6 +141,21 @@ export function createSimulationApi(store, queue) {
           operation.call(queue, OWNER, job.id);
           return send(res, 200, { job: queue.get(OWNER, job.id) });
         }
+      }
+      if (isRun && parts.length === 4 && parts[3] === "report" && req.method === "GET") {
+        const run = store.getRun(OWNER, parts[2]);
+        if (!run) return send(res, 404, { error: "Run not found" });
+        const scenario = store.getScenario(OWNER, run.scenarioId);
+        const checkpoint = store.getCheckpoint(OWNER, run.id);
+        if (!scenario || !checkpoint)
+          return send(res, 404, { error: "Report is not available until a checkpoint is saved" });
+        const report = makeRunReport({
+          run, scenario, checkpoint,
+          events: store.readEvents(OWNER, run.id, { limit: 1000 }),
+          claims: store.listClaims(OWNER, scenario.projectId),
+          sources: store.listSources(OWNER, scenario.projectId)
+        });
+        return send(res, 200, { report, markdown: formatReportMarkdown(report) });
       }
       if (isRun && parts.length === 3 && parts[2] === "compare" && req.method === "POST") {
         const input = await bodyOf(req);

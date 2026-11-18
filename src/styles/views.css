@@ -247,3 +247,11 @@
 .simulation-assumptions summary { cursor: pointer; }
 .simulation-assumptions ul { display: grid; gap: 5px; }
 .simulation-inspector ol { display: grid; gap: 4px; }
+
+.simulation-report {
+  display: grid; gap: 10px;
+  border: 2px dashed var(--line); padding: 12px;
+  background: var(--bg);
+}
+.simulation-report ul { display: grid; gap: 6px; }
+.simulation-report li { overflow-wrap: anywhere; }

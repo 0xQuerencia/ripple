@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WorldCanvas } from "../map/WorldCanvas.jsx";
 import { RunControls } from "./RunControls.jsx";
 import { AgentInspector } from "./AgentInspector.jsx";
+import { ReportTools } from "./ReportTools.jsx";
 import { eventGraph, worldGraph } from "../map/simulationAdapter.js";
 
 async function api(path, method = "GET", payload) {
@@ -423,6 +424,7 @@ export function SimulationLab() {
           {job && (
             <div className="simulation-results">
               <h3>rounds in motion</h3>
+              {checkpoint && <ReportTools runId={job.runId} />}
               <p data-testid="simulation-job-status">{job.status} · {events.length} events</p>
               {checkpoint && job.status === "done" && (
                 <button type="button" className="text-button" disabled={busy}
