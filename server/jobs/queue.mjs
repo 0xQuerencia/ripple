@@ -99,7 +99,7 @@ export class SqliteJobQueue {
 
   progress(ownerId, id, workerId, { seq, calls = 0, tokens = 0, now = Date.now() }) {
     const job = this.get(ownerId, id);
-    if (!job || job.status !== "running" || job.leaseOwner !== workerId)
+    if (!job || job.status !== "running" || job.leaseOwner !== workerId || job.leaseUntil <= now)
       throw new Error("Job lease lost");
     if (!boundedInteger(seq, job.checkpointSeq, Number.MAX_SAFE_INTEGER) ||
       !boundedInteger(calls, 0, 1000) || !boundedInteger(tokens, 0, 10_000_000))
