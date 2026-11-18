@@ -10,6 +10,9 @@ const prefersReducedMotion = () =>
 const IDLE = {
   runId: null,
   status: "idle",
+  jobStatus: "idle",
+  presentationStatus: "paused",
+  partial: false,
   mode: null,
   model: null,
   notice: "",
@@ -54,6 +57,8 @@ function reducer(state, action) {
         runId,
         startedAt: now,
         status: "streaming",
+        jobStatus: "streaming",
+        presentationStatus: "playing",
         events: [first],
         cursor: 1,
       };
@@ -93,24 +98,53 @@ function reducer(state, action) {
     }
     case "summary":
       return { ...state, summary: action.text };
+    case "job-finished":
+      return { ...state, jobStatus: "done" };
     case "done":
-      return { ...state, status: "done" };
+      return {
+        ...state,
+        status: "done",
+        jobStatus: action.cancelled ? "cancelled" : "done",
+        partial: state.partial || Boolean(action.partial),
+        presentationStatus: "paused",
+        replaying: false,
+      };
     case "fail":
-      return { ...state, status: state.events.length > 1 ? "done" : "idle" };
+      return {
+        ...state,
+        status: state.events.length > 1 ? "done" : "idle",
+        jobStatus: "failed",
+        presentationStatus: "paused",
+        partial: state.events.length > 1,
+      };
     case "scrub":
-      return { ...state, cursor: action.cursor, live: false, replaying: false };
+      return {
+        ...state,
+        cursor: Math.max(0, Math.min(action.cursor, state.events.length)),
+        live: false,
+        replaying: false,
+        presentationStatus: "paused",
+      };
     case "replay":
       return {
         ...state,
         cursor: state.cursor >= state.events.length ? 1 : state.cursor,
         live: false,
         replaying: true,
+        presentationStatus: "replaying",
       };
     case "pause":
-      return { ...state, replaying: false, live: false };
+      return { ...state, replaying: false, live: false, presentationStatus: "paused" };
+    case "resume":
+      return { ...state, replaying: false, live: true, presentationStatus: "playing" };
     case "tick": {
       const cursor = Math.min(state.cursor + 1, state.events.length);
-      return { ...state, cursor, replaying: cursor < state.events.length };
+      return {
+        ...state,
+        cursor,
+        replaying: cursor < state.events.length,
+        presentationStatus: cursor < state.events.length ? "replaying" : "paused",
+      };
     }
     case "reset":
       return IDLE;
@@ -126,36 +160,43 @@ function reducer(state, action) {
 export function useRipple({ onProblem }) {
   const [state, dispatch] = useReducer(reducer, IDLE);
   const abort = useRef(null);
+  const activeRun = useRef(null);
+  const paused = useRef(false);
   const queue = useRef([]);
   const timer = useRef(null);
 
-  const clearRun = useCallback(() => {
-    abort.current?.abort();
+  const clearTimer = useCallback(() => {
     clearTimeout(timer.current);
     timer.current = null;
-    queue.current = [];
   }, []);
 
-  const drain = useCallback(() => {
-    if (timer.current) return;
+  const clearRun = useCallback(() => {
+    activeRun.current = null;
+    abort.current?.abort();
+    abort.current = null;
+    clearTimer();
+    paused.current = false;
+    queue.current = [];
+  }, [clearTimer]);
+
+  const drain = useCallback(function drainQueued() {
+    if (paused.current || timer.current !== null) return;
     const next = queue.current.shift();
     if (!next) return;
     dispatch(next);
-    timer.current = setTimeout(
-      () => {
-        timer.current = null;
-        drain();
-      },
-      next.type === "effect" && !prefersReducedMotion() ? REVEAL_GAP_MS : 0,
-    );
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      drainQueued();
+    }, next.type === "effect" && !prefersReducedMotion() ? REVEAL_GAP_MS : 0);
   }, []);
 
   const begin = useCallback(
     async ({ cause }) => {
       clearRun();
       const controller = new AbortController();
-      abort.current = controller;
       const runId = crypto.randomUUID();
+      abort.current = controller;
+      activeRun.current = runId;
       dispatch({ type: "begin", runId, cause, now: Date.now() });
 
       const api = cause.id
@@ -168,13 +209,19 @@ export function useRipple({ onProblem }) {
         tone: cause.tone,
       };
       let started = false;
+      let receivedDone = false;
       let refused = false;
+      const enqueue = (event) => {
+        queue.current.push(event);
+        drain();
+      };
       try {
         await streamRipple(
           { api, local },
           {
             signal: controller.signal,
             onEvent: (event) => {
+              if (activeRun.current !== runId || controller.signal.aborted || receivedDone) return;
               if (event.type === "refused") {
                 refused = true;
                 clearRun();
@@ -183,29 +230,35 @@ export function useRipple({ onProblem }) {
                 return;
               }
               if (event.type === "start") started = true;
-              queue.current.push(event);
-              drain();
+              if (event.type === "done") receivedDone = true;
+              enqueue(event);
             },
           },
         );
-        if (refused) return;
-        // A stream can end without a `done`: a dropped connection, or a host cutting a long answer off.
-        // Never leave the panel ticking forever. Keep what arrived, or report that nothing did.
-        if (started) {
-          queue.current.push({ type: "done" });
-          drain();
-        } else {
+        if (activeRun.current !== runId || refused) return;
+        dispatch({ type: "job-finished" });
+        // Missing terminal markers are incomplete answers, never silent success.
+        if (started && !receivedDone) enqueue({ type: "done", partial: true });
+        if (!started) {
+          clearRun();
           dispatch({ type: "fail" });
           onProblem("The answer stopped before it started. Try again.");
         }
       } catch (error) {
-        if (controller.signal.aborted) return;
-        dispatch({ type: "fail" });
-        onProblem(
-          error instanceof ApiError
-            ? error.message
-            : "Something went wrong. Try again.",
-        );
+        if (controller.signal.aborted || activeRun.current !== runId) return;
+        dispatch({ type: "job-finished" });
+        if (started) {
+          enqueue({ type: "done", partial: true });
+          onProblem("The answer was interrupted. You can still inspect what arrived.");
+        } else {
+          clearRun();
+          dispatch({ type: "fail" });
+          onProblem(
+            error instanceof ApiError
+              ? error.message
+              : "Something went wrong. Try again.",
+          );
+        }
       }
     },
     [clearRun, drain, onProblem],
@@ -226,19 +279,39 @@ export function useRipple({ onProblem }) {
     clearRun();
     dispatch({ type: "reset" });
   }, [clearRun]);
-  const scrub = useCallback(
-    (cursor) => dispatch({ type: "scrub", cursor }),
-    [],
-  );
-  const step = useCallback(() => dispatch({ type: "tick" }), []);
-  const togglePlay = useCallback(
-    () =>
-      dispatch({
-        type:
-          state.replaying || state.status === "streaming" ? "pause" : "replay",
-      }),
-    [state.replaying, state.status],
-  );
 
-  return { state, begin, reset, scrub, step, togglePlay };
+  const stop = useCallback(() => {
+    if (state.status !== "streaming") return;
+    clearRun();
+    dispatch({ type: "done", partial: true, cancelled: true });
+  }, [clearRun, state.status]);
+
+  const scrub = useCallback((cursor) => {
+    paused.current = true;
+    clearTimer();
+    dispatch({ type: "scrub", cursor });
+  }, [clearTimer]);
+
+  const step = useCallback(() => {
+    paused.current = true;
+    clearTimer();
+    dispatch({ type: "tick" });
+  }, [clearTimer]);
+
+  const togglePlay = useCallback(() => {
+    if (state.replaying || state.presentationStatus === "playing") {
+      paused.current = true;
+      clearTimer();
+      dispatch({ type: "pause" });
+    } else if (state.status === "streaming" || queue.current.length > 0) {
+      paused.current = false;
+      dispatch({ type: "resume" });
+      // Continue processing captured effects; never restart the network request.
+      drain();
+    } else {
+      dispatch({ type: "replay" });
+    }
+  }, [clearTimer, drain, state.presentationStatus, state.replaying, state.status]);
+
+  return { state, begin, reset, stop, scrub, step, togglePlay };
 }

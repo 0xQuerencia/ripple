@@ -18,7 +18,7 @@ function useElapsed(since, active) {
 
 /** What Gemma is doing right now, shown while a ripple is being written. */
 export function LiveThinking({ run }) {
-  const active = run.status === "streaming";
+  const active = run.jobStatus === "streaming";
   const seconds = useElapsed(run.startedAt, active);
   if (!active) return null;
 

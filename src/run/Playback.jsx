@@ -2,12 +2,12 @@ function statusText(run) {
   if (run.status === "idle") return "the story is yours to start.";
   if (run.status === "streaming")
     return run.mode === "demo" ? "spreading…" : "gemma is following the links…";
-  return `${run.events.length - 1} possible effect${run.events.length === 2 ? "" : "s"}`;
+  return `${run.events.length - 1} possible effect${run.events.length === 2 ? "" : "s"}${run.partial ? " (incomplete)" : ""}`;
 }
 
-export function Playback({ run, onToggle, onScrub, onStep }) {
+export function Playback({ run, onToggle, onScrub, onStep, onStop }) {
   const hasRun = run.events.length > 0;
-  const playing = run.replaying || run.status === "streaming";
+  const playing = run.presentationStatus === "playing" || run.replaying;
   return (
     <div className="playback">
       <button
@@ -18,6 +18,11 @@ export function Playback({ run, onToggle, onScrub, onStep }) {
       >
         {playing ? "pause" : "replay"}
       </button>
+      {run.status === "streaming" && (
+        <button type="button" className="text-button" onClick={onStop}>
+          stop
+        </button>
+      )}
       <input
         type="range"
         min={0}

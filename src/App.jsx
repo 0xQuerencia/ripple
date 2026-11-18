@@ -31,6 +31,7 @@ export default function App() {
     state: run,
     begin,
     reset,
+    stop,
     scrub,
     step,
     togglePlay,
@@ -156,6 +157,7 @@ export default function App() {
             onToggle={togglePlay}
             onScrub={scrub}
             onStep={step}
+            onStop={stop}
           />
         </section>
         <FieldNotes

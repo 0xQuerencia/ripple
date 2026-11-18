@@ -4,6 +4,8 @@ import { SYSTEM_BY_ID } from "../../shared/world.mjs";
 const OFFLINE_NOTICE =
   "The server is unreachable, so this ripple uses the offline demo engine.";
 const OFFLINE_GAP_MS = 120;
+const MAX_STREAM_LINE = 64 * 1024;
+const EVENT_TYPES = new Set(["start", "effect", "summary", "done", "refused"]);
 
 export class ApiError extends Error {
   constructor(message, status) {
@@ -21,7 +23,8 @@ export async function fetchStatus(signal) {
   }
 }
 
-async function* ndjson(body) {
+export async function* ndjson(body) {
+  if (!body?.getReader) throw new ApiError("The server did not send a readable stream.", 502);
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -29,14 +32,32 @@ async function* ndjson(body) {
     const { done, value } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
+    if (buffer.length > MAX_STREAM_LINE) throw new ApiError("The answer exceeded the stream limit.", 502);
     let newline;
     while ((newline = buffer.indexOf("\n")) >= 0) {
       const text = buffer.slice(0, newline).trim();
       buffer = buffer.slice(newline + 1);
-      if (text) yield JSON.parse(text);
+      if (text) yield parseStreamEvent(text);
     }
   }
-  if (buffer.trim()) yield JSON.parse(buffer);
+  buffer += decoder.decode();
+  if (buffer.trim()) yield parseStreamEvent(buffer.trim());
+}
+
+function parseStreamEvent(line) {
+  let event;
+  try {
+    event = JSON.parse(line);
+  } catch {
+    throw new ApiError("The answer contained invalid stream data.", 502);
+  }
+  if (!event || typeof event !== "object" || !EVENT_TYPES.has(event.type))
+    throw new ApiError("The answer contained an unknown event.", 502);
+  if (event.type === "start" && (!event.origin || typeof event.origin !== "object"))
+    throw new ApiError("The answer has an invalid start event.", 502);
+  if (event.type === "effect" && (!event.effect || typeof event.effect !== "object"))
+    throw new ApiError("The answer has an invalid effect event.", 502);
+  return event;
 }
 
 const wait = (ms, signal) =>
@@ -109,5 +130,9 @@ export async function streamRipple(request, { signal, onEvent }) {
       response.status,
     );
   }
-  for await (const event of ndjson(response.body)) onEvent(event);
+  for await (const event of ndjson(response.body)) {
+    if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+    onEvent(event);
+    if (event.type === "done" || event.type === "refused") break;
+  }
 }
