@@ -306,7 +306,8 @@ test("clicking a map node shows the same causal path as the journal", async ({ p
   await page.locator(".system-node .node-face").last().click();
   const trail = page.getByTestId("ancestry").locator("li");
   expect(await trail.count()).toBeGreaterThan(1);
+  const pathBefore = await trail.allTextContents();
   await page.getByRole("button", { name: "the journal", exact: true }).click();
   await page.locator(".journal-entry").last().click();
-  await expect(trail).toHaveCount(await trail.count());
+  await expect(trail).toHaveText(pathBefore);
 });
