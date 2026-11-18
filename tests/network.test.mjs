@@ -30,3 +30,9 @@ test("a missing or too-short header falls back to the socket address", () => {
   assert.equal(clientIp(req("203.0.113.9"), 3), "10.0.0.1");
   assert.equal(clientIp({ headers: {} }, 0), "unknown");
 });
+
+test("forged or malformed proxy addresses do not become rate-limit identities", () => {
+  assert.equal(clientIp(req("not-an-ip"), 1), "10.0.0.1");
+  assert.equal(clientIp(req("spoofed, 203.0.113.7"), 1), "203.0.113.7");
+  assert.equal(clientIp(req("203.0.113.7, invalid"), 1), "10.0.0.1");
+});

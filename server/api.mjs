@@ -234,6 +234,9 @@ export function createApi({
   }
 
   async function ripple(req, res) {
+    const contentType = req.headers?.["content-type"];
+    if (contentType && !/^application\/json(?:\s*;|\s*$)/i.test(contentType))
+      throw new HttpError(415, "Send JSON, please.");
     if (!allow(clientIp(req, trustedProxyHops)))
       throw new HttpError(429, "Slow down a little. Try again in a minute.");
     const input = parseRippleRequest(await readJson(req));
@@ -304,7 +307,11 @@ export function createApi({
     } catch (error) {
       if (error instanceof HttpError)
         return send(res, error.status, { error: error.message });
-      log(`[api] unexpected error: ${error.message}`);
+      log(`[api] unexpected error: ${error.name || "Error"}`);
+      if (res.headersSent) {
+        if (!res.writableEnded) res.end(line({ type: "done", partial: true }));
+        return;
+      }
       return send(res, 500, { error: "Something went wrong on our side." });
     }
   };

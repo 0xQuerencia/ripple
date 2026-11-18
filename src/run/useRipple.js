@@ -137,6 +137,14 @@ function reducer(state, action) {
       return { ...state, replaying: false, live: false, presentationStatus: "paused" };
     case "resume":
       return { ...state, replaying: false, live: true, presentationStatus: "playing" };
+    case "step":
+      return {
+        ...state,
+        cursor: Math.min(state.cursor + 1, state.events.length),
+        live: false,
+        replaying: false,
+        presentationStatus: "paused",
+      };
     case "tick": {
       const cursor = Math.min(state.cursor + 1, state.events.length);
       return {
@@ -295,7 +303,7 @@ export function useRipple({ onProblem }) {
   const step = useCallback(() => {
     paused.current = true;
     clearTimer();
-    dispatch({ type: "tick" });
+    dispatch({ type: "step" });
   }, [clearTimer]);
 
   const togglePlay = useCallback(() => {
