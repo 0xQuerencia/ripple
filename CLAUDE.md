@@ -1,11 +1,11 @@
 # Ripple: project instructions
 
-Type a what-if; Gemma 4 draws a map of how it could ripple through the world. Read `README.md` for the product and `docs/NOTES.md` before touching the stream, the map or the server.
+Quick Ripple visualizes possibilities. Simulation provides local decision rehearsal with auditable simulated actors. Read `README.md` for the product and `docs/NOTES.md` before touching the stream, the map or the server.
 
 ## Commands
 
 - `npm run dev` runs the app and API together. `npm test` (no network) and `npm run test:browser` (offline demo, port 5179) must pass before you finish.
-- `npm run build` must succeed. `npm run sprites` re-renders the pixel sprites. `npm run format` runs prettier.
+- `npm run build` and `npm run evaluate` must succeed. `npm run sprites` re-renders the pixel sprites. `npm run format` runs prettier.
 
 ## Implementation style
 
@@ -25,3 +25,5 @@ Type a what-if; Gemma 4 draws a map of how it could ripple through the world. Re
 - **Never commit `.env` or a real key.** The key lives only on the server.
 - **The offline demo must never pretend to be Gemma.** Keep `mode` and the on-screen notice honest.
 - **Do not change the look without being asked.** Refactors must leave screenshots unchanged.
+
+- Use short, natural PR titles and descriptions. Never label synthetic agent results as real predictions.

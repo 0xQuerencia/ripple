@@ -1,6 +1,6 @@
 # Deploying Ripple
 
-Ripple is one small Node container with no database and nothing to back up. These steps put it behind HTTPS on a server you control, for example at `ripple.example.com`.
+These steps deploy **Quick Ripple** behind HTTPS. Simulation projects and jobs are local-only; this page does not set up public simulation accounts or persistent hosted workers.
 
 ## Easiest: Vercel (no server, no open ports)
 
@@ -10,6 +10,8 @@ Vercel serves the built site and runs the API as a streaming function, so there 
 2. Under **Environment Variables** add `GEMINI_API_KEY`. Leave the rest alone: behind Vercel the hop count defaults to 1.
 3. Deploy, then open the `*.vercel.app` address and ask something. The effects should appear one at a time. If they all arrive at once at the end, streaming is being buffered somewhere.
 4. In **Settings, then Domains**, add `ripple.example.com`. Vercel shows the DNS record to create. At your registrar add it as a **CNAME**: host `ripple`, value what Vercel shows (usually `cname.vercel-dns.com`). The value must be a hostname, never an IP address or a `https://` link. HTTPS certificates are automatic.
+
+Vercel serves the public Quick Ripple experience only. The Simulation tab requires the local app and won't run on Vercel functions.
 
 Good to know on Vercel:
 
@@ -50,7 +52,7 @@ docker compose ps                       # should say "healthy" after a few secon
 curl -s http://127.0.0.1:8787/api/status   # {"ai":true,"model":"gemma-4-26b-a4b-it"}
 ```
 
-The container runs as a non-root user with a read-only filesystem, and is published on `127.0.0.1:8787` only, so nothing outside the machine can reach it except through your proxy.
+The container runs as a non-root user with a read-only filesystem and binds to `127.0.0.1:8787`. Docker Compose uses `RIPPLE_DB_PATH=:memory:` so it can boot without writing to the filesystem. It serves Quick Ripple; the container's temporary database does **not** persist projects.
 
 ## 4. Put HTTPS in front
 
@@ -111,6 +113,7 @@ All optional, all in `.env`:
 | `RATE_LIMIT_PER_MINUTE` | `12` | Questions per visitor per minute |
 | `GLOBAL_LIMIT_PER_HOUR` | `300` | Gemma calls across everyone per hour; past it, the offline demo answers |
 | `PORT`, `HOST` | `8787`, `0.0.0.0` | Where the server listens inside the container |
+| `RIPPLE_DB_PATH` | `./ripple-local.sqlite` | Writable local SQLite database path; Docker Compose overrides to `:memory:` |
 
 ## Updating, logs, and stopping
 

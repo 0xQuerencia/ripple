@@ -113,7 +113,7 @@ export function createProjectApi(store) {
           if (req.method === "DELETE") return json(res, 200, { deleted: store.deleteProject(OWNER, projectId) });
         }
         if (parts.length === 4 && parts[3] === "runs") {
-          if (req.method === "GET") return json(res, 200, { runs: store.listRuns(OWNER, projectId) });
+          if (req.method === "GET") return json(res, 200, { runs: store.listRuns(OWNER, projectId).filter((run) => run.scenarioId === "quick-ripple") });
           if (req.method === "POST") return json(res, 201, { run: saveQuickRun(store, projectId, await readBody(req)) });
         }
         if (parts.length === 4 && parts[3] === "claims" && req.method === "GET")
@@ -163,13 +163,16 @@ export function createProjectApi(store) {
       }
       if (parts.length === 3 && parts[1] === "saved-runs" && req.method === "GET") {
         const run = store.getRun(OWNER, parts[2]);
-        if (!run) return json(res, 404, { error: "Run not found" });
+        if (!run || run.scenarioId !== "quick-ripple") return json(res, 404, { error: "Quick run not found" });
         return json(res, 200, { run,
           events: store.readEvents(OWNER, run.id, { limit: 100 })
             .map((event) => event.payload.quickEvent) });
       }
-      if (parts.length === 3 && parts[1] === "saved-runs" && req.method === "DELETE")
+      if (parts.length === 3 && parts[1] === "saved-runs" && req.method === "DELETE") {
+        const run = store.getRun(OWNER, parts[2]);
+        if (!run || run.scenarioId !== "quick-ripple") return json(res, 404, { error: "Quick run not found" });
         return json(res, 200, { deleted: store.deleteRun(OWNER, parts[2]) });
+      }
       return json(res, 405, { error: "Unsupported action" });
     } catch (error) {
       return json(res, 400, { error: error.message === "Unexpected end of JSON input"

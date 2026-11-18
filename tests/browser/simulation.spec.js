@@ -1,0 +1,69 @@
+import { test, expect } from "@playwright/test";
+
+const post = async (request, path, data) => {
+  const response = await request.post(path, { data });
+  expect(response.ok(), await response.text()).toBe(true);
+  return response.json();
+};
+
+test("local evidence can be extracted and reviewed through the original UI", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "projects", exact: true }).click();
+  const title = "Evidence check " + Date.now();
+  await page.getByRole("textbox", { name: "New project title" }).fill(title);
+  await page.getByRole("button", { name: "new project" }).click();
+  await expect(page.getByRole("button", { name: title })).toBeVisible();
+  await page.getByLabel("attach TXT, MD or CSV").setInputFiles({
+    name: "metrics.csv", mimeType: "text/csv",
+    buffer: Buffer.from("metric,value\nChurn,5%\nCurrent price,499\n")
+  });
+  await expect(page.getByText("metrics.csv")).toBeVisible();
+  await page.getByRole("button", { name: "extract claims" }).click();
+  await expect(page.getByRole("textbox", { name: "Claim from metrics.csv" }).first())
+    .toHaveValue(/Churn/);
+  await page.getByRole("button", { name: "accept", exact: true }).first().click();
+  await expect(page.getByText("reviewed", { exact: false }).first()).toBeVisible();
+});
+
+test("saved simulated decisions have a graph, report and comparable outcomes", async ({ page, request }) => {
+  const project = (await post(request, "/api/projects",
+    { title: "Full workflow " + Date.now() })).project;
+  const root = "/api/projects/" + project.id + "/scenarios";
+  const scenario = (await post(request, root, {
+    companyName: "Sample SaaS",
+    question: "What happens if our subscription price changes?",
+    baselinePrice: 499, marketingBudget: 200,
+    segments: [{ id: "group", label: "Monthly subscribers",
+      customers: 100, monthlyChurn: 0.05 }],
+    interventions: [
+      { label: "full rollout", price: 599, rolloutPercent: 100 },
+      { label: "pilot rollout", price: 599, rolloutPercent: 20 }
+    ],
+    rounds: 3
+  })).scenario;
+  const runRoot = root + "/" + scenario.id + "/runs";
+  const baseline = await post(request, runRoot, { interventionId: "baseline" });
+  await expect.poll(async () => {
+    const response = await request.get("/api/simulation-jobs/" + baseline.job.id);
+    return (await response.json()).job.status;
+  }, { timeout: 20_000 }).toBe("done");
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "simulation", exact: true }).click();
+  await page.getByLabel("Simulation project").selectOption(project.id);
+  await expect(page.getByRole("heading", { name: scenario.question })).toBeVisible();
+  await page.getByRole("button", { name: "run alternative" }).first().click();
+  await expect(page.getByTestId("simulation-job-status")).toContainText("done",
+    { timeout: 20_000 });
+  await expect(page.locator(".simulation-graph .system-node").first()).toBeVisible();
+  await page.getByRole("button", { name: "prepare report" }).click();
+  await expect(page.getByRole("button", { name: "export markdown" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "export JSON" })).toBeVisible();
+
+  await expect(page.getByLabel("Compare alternative").locator("option")).toHaveCount(3);
+  await page.getByLabel("Compare baseline").selectOption(baseline.run.id);
+  await page.getByLabel("Compare alternative").selectOption({ index: 2 });
+  await page.getByRole("button", { name: "compare runs" }).click();
+  await expect(page.getByRole("region", { name: "Run comparison" }))
+    .toContainText("currentPrice");
+});
