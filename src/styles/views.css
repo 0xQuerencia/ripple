@@ -122,3 +122,41 @@
   font-size: 34px;
   line-height: 1.05;
 }
+
+.history {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 36px clamp(16px, 4vw, 48px) 28px;
+  display: grid;
+  gap: 20px;
+  align-content: start;
+}
+.history h2 { font-size: 30px; line-height: 1.1; }
+.history h3 { font-size: 23px; }
+.history p { color: var(--ink-2); }
+.history form, .history-actions, .history-title, .history-run {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+}
+.history input {
+  border: 3px solid var(--line);
+  border-radius: 5px;
+  padding: 8px 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  min-width: 0;
+  flex: 1;
+}
+.history button { font: inherit; }
+.history-projects, .history-runs { display: grid; gap: 12px; }
+.history-card {
+  padding: 16px;
+  border: 3px solid var(--line);
+  border-radius: 7px 9px 6px 8px;
+  background: var(--paper);
+  display: grid;
+  gap: 12px;
+}
+.history-run { justify-content: space-between; border-top: 2px dashed var(--line); padding-top: 9px; }
+.history-run strong { overflow-wrap: anywhere; }
+.history button[aria-pressed="true"] { text-decoration: underline wavy var(--accent); }

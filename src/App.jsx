@@ -6,6 +6,7 @@ import { Playback } from "./run/Playback.jsx";
 import { FieldNotes } from "./notes/FieldNotes.jsx";
 import { JournalView } from "./notes/JournalView.jsx";
 import { CompareView } from "./notes/CompareView.jsx";
+import { ProjectHistory } from "./simulation/ProjectHistory.jsx";
 import { HelpDialog } from "./ui/HelpDialog.jsx";
 import { LiveThinking } from "./run/LiveThinking.jsx";
 import { useRipple } from "./run/useRipple.js";
@@ -16,6 +17,7 @@ const FRAME_LABEL = {
   world: "the world",
   journal: "the journal",
   compare: "compare",
+  projects: "projects",
 };
 
 export default function App() {
@@ -32,6 +34,7 @@ export default function App() {
     begin,
     reset,
     stop,
+    restore,
     scrub,
     step,
     togglePlay,
@@ -143,6 +146,17 @@ export default function App() {
                 visible={visible}
                 onOpen={(event) => {
                   handleInspect(event);
+                  setTab("world");
+                }}
+              />
+            )}
+            {tab === "projects" && (
+              <ProjectHistory
+                current={run}
+                onOpen={(saved) => {
+                  restore(saved);
+                  setPickedId(null);
+                  setFocusedEventId(null);
                   setTab("world");
                 }}
               />
