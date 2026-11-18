@@ -22,6 +22,8 @@ const format = (amount) => Number(amount).toLocaleString(undefined, {
 export function SimulationLab() {
   const [projects, setProjects] = useState([]);
   const [projectId, setProjectId] = useState("");
+  const [reviewedClaims, setReviewedClaims] = useState([]);
+  const [companyClaimId, setCompanyClaimId] = useState("");
   const [scenarios, setScenarios] = useState([]);
   const [scenarioId, setScenarioId] = useState("");
   const [scenario, setScenario] = useState(null);
@@ -61,6 +63,22 @@ export function SimulationLab() {
       setProjectId((current) => current || result.projects[0]?.id || "");
     }).catch(() => setNotice("Simulations need the local Ripple server."));
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    setCompanyClaimId("");
+    setReviewedClaims([]);
+    setSegments((all) => all.map((segment) => ({ ...segment, sourceClaimId: "" })));
+    if (projectId) {
+      api("/api/projects/" + projectId + "/claims")
+        .then((result) => {
+          if (active) setReviewedClaims(result.claims.filter((claim) =>
+            claim.reviewed && !claim.rejected && claim.confidenceStatus === "reviewed"));
+        })
+        .catch((error) => { if (active) setNotice(error.message); });
+    }
+    return () => { active = false; };
+  }, [projectId]);
 
   const loadScenarios = useCallback(async () => {
     if (!projectId) { setScenarios([]); return; }
@@ -143,10 +161,12 @@ export function SimulationLab() {
       const payload = {
         companyName: company.trim(), question: question.trim(),
         baselinePrice: Number(basePrice), marketingBudget: Number(budget),
+        companySourceClaimIds: companyClaimId ? [companyClaimId] : [],
         segments: segments.map((s) => ({
           id: s.id, label: s.label.trim(),
           customers: Number(s.customers),
-          monthlyChurn: Number(s.churn) / 100
+          monthlyChurn: Number(s.churn) / 100,
+          sourceClaimIds: s.sourceClaimId ? [s.sourceClaimId] : []
         })),
         interventions: options.map((o) => ({
           label: o.label, price: Number(o.price),
@@ -284,6 +304,20 @@ export function SimulationLab() {
                   onChange={(event) => setRounds(event.target.value)} />
               </label>
             </div>
+            {reviewedClaims.length ? (
+              <label>supporting source for the current price (optional)
+                <select aria-label="Price evidence" value={companyClaimId}
+                  onChange={(event) => setCompanyClaimId(event.target.value)}>
+                  <option value="">no source linked</option>
+                  {reviewedClaims.map((claim) => (
+                    <option key={claim.id} value={claim.id}>{claim.text.slice(0, 120)}</option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <p>have source material? review claims in Projects to link them here.</p>
+            )}
+            <p>source links show where inputs came from; they do not verify the numbers automatically.</p>
             <h3>customer segments</h3>
             {segments.map((segment, i) => (
               <div className="simulation-fields" key={segment.id}>
@@ -299,6 +333,18 @@ export function SimulationLab() {
                   <input required type="number" min="0" max="100" step="any" value={segment.churn}
                     onChange={(event) => changeSegment(i, "churn", event.target.value)} />
                 </label>
+                {reviewedClaims.length > 0 && (
+                  <label>segment evidence (optional)
+                    <select aria-label={"Evidence for " + (segment.label || segment.id)}
+                      value={segment.sourceClaimId || ""}
+                      onChange={(event) => changeSegment(i, "sourceClaimId", event.target.value)}>
+                      <option value="">no source linked</option>
+                      {reviewedClaims.map((claim) => (
+                        <option key={claim.id} value={claim.id}>{claim.text.slice(0, 120)}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
                 {segments.length > 1 && <button className="text-button" type="button"
                   onClick={() => setSegments((all) => all.filter((_, n) => n !== i))}>remove</button>}
               </div>
@@ -363,6 +409,9 @@ export function SimulationLab() {
                       {entity.label} · {entity.provenance} ·
                       {Object.entries(entity.attributes).map(([key, value]) =>
                         " " + key + ": " + value).join(", ")}
+                      {entity.sourceClaimIds?.length ? " · reference: " + entity.sourceClaimIds
+                        .map((id) => reviewedClaims.find((claim) => claim.id === id)?.text || id)
+                        .join("; ") : " · no source reference"}
                     </li>
                   ))}
                 </ul>
