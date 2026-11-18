@@ -14,7 +14,7 @@ function decodeObject(encoded) {
 }
 
 function configOf(env) {
-  const team = String(env.RIPPLE_ACCESS_TEAM || "").trim();
+  const team = String(env.RIPPLE_ACCESS_TEAM || "").trim().toLowerCase();
   const aud = String(env.RIPPLE_ACCESS_AUD || "").trim();
   const hostname = String(env.RIPPLE_PRIVATE_HOSTNAME || "").trim().toLowerCase();
   const email = String(env.RIPPLE_ACCESS_EMAIL || "").trim().toLowerCase();
