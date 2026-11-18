@@ -35,5 +35,27 @@
         }
       ]
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/projects",
+      "destination": "https://ripple-api.querencia.art/api/projects"
+    },
+    {
+      "source": "/api/projects/:path*",
+      "destination": "https://ripple-api.querencia.art/api/projects/:path*"
+    },
+    {
+      "source": "/api/saved-runs/:path*",
+      "destination": "https://ripple-api.querencia.art/api/saved-runs/:path*"
+    },
+    {
+      "source": "/api/simulation-jobs/:path*",
+      "destination": "https://ripple-api.querencia.art/api/simulation-jobs/:path*"
+    },
+    {
+      "source": "/api/simulation-runs/:path*",
+      "destination": "https://ripple-api.querencia.art/api/simulation-runs/:path*"
+    }
   ]
 }
