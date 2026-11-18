@@ -45,6 +45,11 @@ test("request deadline aborts a hanging upstream call", async () => {
       }, { once: true });
     }),
   });
-  await request(api);
+  const keepAlive = setTimeout(() => {}, 60);
+  try {
+    await request(api);
+  } finally {
+    clearTimeout(keepAlive);
+  }
   assert.equal(stopped, true);
 });
