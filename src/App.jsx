@@ -126,8 +126,11 @@ export default function App() {
                 idle={run.status === "idle"}
                 busy={busy}
                 onPickNode={(id) => {
-                  setPickedId(id);
-                  setFocusedEventId(null);
+                  const event = visible.find((item) => item.targetId === id);
+                  if (event) {
+                    setPickedId(id);
+                    setFocusedEventId(event.id);
+                  }
                 }}
                 onDropCause={startRun}
                 onAsk={startRun}

@@ -54,15 +54,19 @@ export function layoutRipple(events) {
       if (taken.every((other) => away(candidate, other) >= MIN_GAP))
         placed = candidate;
     }
-    // Crowded beyond repair: keep the last candidate rather than refuse to draw the node.
-    positions.set(
-      event.targetId,
-      placed ?? {
-        x: Math.cos(preferred) * ringRadius(event.round + 1),
-        y: Math.sin(preferred) * ringRadius(event.round + 1),
+    if (!placed) {
+      const farthest = taken.reduce(
+        (max, point) => Math.max(max, Math.hypot(point.x, point.y)),
+        0,
+      );
+      const radius = Math.max(ringRadius(event.round + 1), farthest + MIN_GAP);
+      placed = {
+        x: Math.cos(preferred) * radius,
+        y: Math.sin(preferred) * radius,
         angle: preferred,
-      },
-    );
+      };
+    }
+    positions.set(event.targetId, placed);
   }
   return positions;
 }
