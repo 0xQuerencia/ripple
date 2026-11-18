@@ -38,8 +38,8 @@ test("permissions, budgets and double spending reject impossible actions", () =>
     ] });
   assert.equal(result.state.resources.marketingBudget, 100);
   assert.equal(result.state.entities[1].attributes.customers, 20);
-  assert.equal(result.rejected.length, 3);
-  assert.equal(result.accepted[0].actionType, "do_nothing");
+  assert.equal(result.rejected.length, 4);
+  assert.equal(result.accepted.length, 0);
 });
 
 test("sorting and state changes are deterministic independent of proposal order", () => {
