@@ -45,7 +45,8 @@ export async function workOne(queue, workerId, executeTick, {
       }
       const beforeCommit = queue.get(ownerId, id);
       if (signal.aborted || !beforeCommit || beforeCommit.status !== "running" ||
-          beforeCommit.leaseOwner !== workerId)
+          beforeCommit.leaseOwner !== workerId ||
+          !queue.heartbeat(ownerId, id, workerId, { now: now(), leaseMs }))
         return { status: beforeCommit?.status ?? "interrupted", tick };
       if (!result || !Array.isArray(result.events) || !result.checkpoint ||
           result.checkpoint.tick !== tick + 1)
@@ -64,7 +65,8 @@ export async function workOne(queue, workerId, executeTick, {
       calls += stepCalls;
       tokens += stepTokens;
       if (progress.status === "paused") return { status: "paused", tick };
-      if (run.budget.maxTokens > 0 && tokens > run.budget.maxTokens) {
+      if ((run.budget.maxTokens > 0 && tokens > run.budget.maxTokens) ||
+          (run.budget.maxCalls > 0 && calls > run.budget.maxCalls)) {
         queue.fail(ownerId, id, workerId, "budget_exhausted");
         return { status: "failed", tick };
       }
