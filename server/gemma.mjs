@@ -95,7 +95,7 @@ export function parseModelJson(text) {
 }
 
 /** Yield the answer text of each server-sent event, however the network chunks the bytes. */
-async function* sseText(body) {
+async function* sseText(body, onUsage) {
   const decoder = new TextDecoder();
   let buffer = "";
   for await (const chunk of body) {
@@ -117,9 +117,12 @@ async function* sseText(body) {
         .join("");
       if (!data) continue;
       try {
-        yield extractText(JSON.parse(data));
+        const parsed = JSON.parse(data);
+        if (parsed.usageMetadata && typeof onUsage === "function")
+          onUsage(parsed.usageMetadata);
+        yield extractText(parsed);
       } catch {
-        /* ignore a malformed event */
+        continue;
       }
     }
   }
@@ -153,6 +156,7 @@ export async function* streamGemma(
     model = DEFAULT_MODEL,
     signal,
     timeoutMs = REQUEST_TIMEOUT_MS,
+    onUsage,
   },
 ) {
   const { system, user } = buildPrompt(input);
@@ -180,7 +184,7 @@ export async function* streamGemma(
     });
 
   let builder = null;
-  for await (const line of lines(sseText(response.body))) {
+  for await (const line of lines(sseText(response.body, onUsage))) {
     const item = line.trim().startsWith("{") ? parseModelJson(line) : null;
     if (!item) continue;
 

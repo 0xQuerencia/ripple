@@ -133,14 +133,30 @@ function* demoEvents(input, notice) {
 }
 
 const MAX_ATTEMPTS = 3;
+const DEFAULT_REQUEST_TIMEOUT_MS = 105_000;
+
+class BudgetExhausted extends Error {}
 const LARGE_MODEL = "gemma-4-31b-it";
 
 /** Server errors, rate limits and dropped connections usually pass; a bad key or model name will not. */
 const isTransient = (error) =>
-  error.status === undefined || error.status === 429 || error.status >= 500;
+  !(error instanceof BudgetExhausted) &&
+  (error.status === undefined || error.status === 429 || error.status >= 500);
 const otherModel = (model) =>
   model === LARGE_MODEL ? DEFAULT_MODEL : LARGE_MODEL;
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const sleep = (ms, signal) =>
+  new Promise((resolve, reject) => {
+    if (signal.aborted) return reject(signal.reason);
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(signal.reason);
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
 
 /**
  * The HTTP API: GET /api/status and POST /api/ripple (a stream of StreamEvent lines, see
@@ -166,6 +182,7 @@ export function createApi({
   trustedProxyHops = 0,
   globalLimit = 300,
   globalWindowMs = 3_600_000,
+  requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
   log = console.error,
 }) {
   const allow = createRateLimiter({ limit, windowMs });
@@ -176,13 +193,21 @@ export function createApi({
   });
 
   /** Stream one Gemma attempt to the client. Nothing is sent until the first valid effect arrives. */
-  async function relay(input, useModel, emit, state, signal) {
+  async function relay(input, useModel, emit, state, signal, countedFetch) {
     let origin = null;
     for await (const event of streamGemma(input, {
-      fetchImpl,
+      fetchImpl: countedFetch,
       apiKey,
       model: useModel,
       signal,
+      timeoutMs: Math.max(1, requestTimeoutMs),
+      onUsage: (usage) => {
+        state.usage = {
+          promptTokens: usage.promptTokenCount ?? null,
+          outputTokens: usage.candidatesTokenCount ?? null,
+          totalTokens: usage.totalTokenCount ?? null,
+        };
+      },
     })) {
       if (event.type === "refused") {
         emit(event);
@@ -205,7 +230,7 @@ export function createApi({
       } else if (event.type === "summary" && state.effects) emit(event);
     }
     if (!state.effects) throw new Error("Gemma returned no valid effects");
-    emit({ type: "done" });
+    emit({ type: "done", usage: { ...state.usage, upstreamAttempts: state.upstreamAttempts } });
   }
 
   async function ripple(req, res) {
@@ -223,29 +248,47 @@ export function createApi({
       res.end();
     };
     if (!apiKey) return emitAll(demoEvents(input, NOTICE_NO_KEY));
-    if (!allowGemma("all")) return emitAll(demoEvents(input, NOTICE_BUSY));
 
     const abort = new AbortController();
-    res.on?.("close", () => abort.abort());
-    const state = { effects: 0 };
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const deadline = AbortSignal.timeout(requestTimeoutMs);
+    const signal = AbortSignal.any([abort.signal, deadline]);
+    res.on?.("close", () => {
+      if (!res.writableEnded) abort.abort();
+    });
+    const state = { effects: 0, upstreamAttempts: 0, usage: {} };
+    let budgetBlocked = false;
+    const countedFetch = (url, options) => {
+      if (signal.aborted) throw signal.reason;
+      if (!allowGemma("all")) throw new BudgetExhausted();
+      state.upstreamAttempts++;
+      return fetchImpl(url, options);
+    };
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS && !signal.aborted; attempt++) {
       const useModel = attempt === MAX_ATTEMPTS ? otherModel(model) : model;
       try {
-        await relay(input, useModel, emit, state, abort.signal);
+        await relay(input, useModel, emit, state, signal, countedFetch);
         return res.end();
       } catch (error) {
-        log(
-          `[ripple] Gemma attempt ${attempt}/${MAX_ATTEMPTS} (${useModel}) failed: ${error.message}`,
-        );
+        if (error instanceof BudgetExhausted) budgetBlocked = true;
+        if (!signal.aborted)
+          log(`[ripple] Gemma attempt ${attempt}/${MAX_ATTEMPTS}: ${error.status ?? error.name ?? "upstream error"}`);
+        if (signal.aborted) return;
         if (state.effects) {
-          emit({ type: "done", partial: true });
+          emit({ type: "done", partial: true, usage: { ...state.usage, upstreamAttempts: state.upstreamAttempts } });
           return res.end();
         }
-        if (abort.signal.aborted || !isTransient(error)) break;
-        if (attempt < MAX_ATTEMPTS) await sleep(retryDelayMs * attempt);
+        if (!isTransient(error)) break;
+        if (attempt < MAX_ATTEMPTS) {
+          try {
+            await sleep(retryDelayMs * attempt, signal);
+          } catch {
+            return;
+          }
+        }
       }
     }
-    return emitAll(demoEvents(input, NOTICE_FAILED));
+    if (signal.aborted) return;
+    return emitAll(demoEvents(input, budgetBlocked ? NOTICE_BUSY : NOTICE_FAILED));
   }
 
   return async function handle(req, res, next) {
