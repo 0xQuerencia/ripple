@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { validateProject, validateRun, validateEvent, validateCheckpoint } from "../../shared/simulation/schema.mjs";
+import { validateProject, validateRun, validateEvent, validateCheckpoint, validateSource } from "../../shared/simulation/schema.mjs";
 import { hashState } from "./stateHash.mjs";
 
 const TABLES = [
@@ -153,6 +153,44 @@ export class SqliteEventStore {
       }
     }
     return { state, seq: cursor, stateHash: hashState(state) };
+  }
+
+  initSources() {
+    this.db.exec("CREATE TABLE IF NOT EXISTS sources (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE, metadata TEXT NOT NULL, parsed TEXT NOT NULL)");
+    this.db.exec("CREATE INDEX IF NOT EXISTS idx_sources_project ON sources(owner_id, project_id)");
+  }
+
+  putSource(ownerId, projectId, source, parsed) {
+    this.initSources();
+    validateSource(source);
+    if (source.ownerId !== ownerId || source.projectId !== projectId || !this.getProject(ownerId, projectId))
+      throw new Error("Project not found");
+    const duplicate = this.db.prepare("SELECT metadata FROM sources WHERE owner_id = ? AND project_id = ?")
+      .all(ownerId, projectId).find((row) => JSON.parse(row.metadata).hash === source.hash);
+    if (duplicate) return JSON.parse(duplicate.metadata);
+    this.db.prepare("INSERT INTO sources VALUES (?, ?, ?, ?, ?)")
+      .run(source.id, ownerId, projectId, JSON.stringify(source), JSON.stringify(parsed));
+    return source;
+  }
+
+  listSources(ownerId, projectId) {
+    this.initSources();
+    if (!this.getProject(ownerId, projectId)) return [];
+    return this.db.prepare("SELECT metadata FROM sources WHERE owner_id = ? AND project_id = ? ORDER BY rowid")
+      .all(ownerId, projectId).map((row) => JSON.parse(row.metadata));
+  }
+
+  getSource(ownerId, projectId, sourceId) {
+    this.initSources();
+    const row = this.db.prepare("SELECT metadata, parsed FROM sources WHERE id = ? AND owner_id = ? AND project_id = ?")
+      .get(sourceId, ownerId, projectId);
+    return row ? { source: JSON.parse(row.metadata), parsed: JSON.parse(row.parsed) } : null;
+  }
+
+  deleteSource(ownerId, projectId, sourceId) {
+    this.initSources();
+    return this.db.prepare("DELETE FROM sources WHERE id = ? AND owner_id = ? AND project_id = ?")
+      .run(sourceId, ownerId, projectId).changes > 0;
   }
 
   updateProject(ownerId, projectId, title) {

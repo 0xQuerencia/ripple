@@ -1,3 +1,4 @@
+import { parseSource, makeSource } from "../evidence/parser.mjs";
 import { randomUUID } from "node:crypto";
 
 const OWNER = "local";
@@ -102,6 +103,24 @@ export function createProjectApi(store) {
         if (parts.length === 4 && parts[3] === "runs") {
           if (req.method === "GET") return json(res, 200, { runs: store.listRuns(OWNER, projectId) });
           if (req.method === "POST") return json(res, 201, { run: saveQuickRun(store, projectId, await readBody(req)) });
+        }
+        if (parts.length === 4 && parts[3] === "sources") {
+          if (req.method === "GET") return json(res, 200, { sources: store.listSources(OWNER, projectId) });
+          if (req.method === "POST") {
+            const input = await readBody(req);
+            const parsed = parseSource(input);
+            const source = makeSource(OWNER, projectId, input.filename, parsed);
+            return json(res, 201, { source: store.putSource(OWNER, projectId, source, parsed) });
+          }
+        }
+        if (parts.length === 5 && parts[3] === "sources") {
+          const sourceId = parts[4];
+          if (req.method === "GET") {
+            const record = store.getSource(OWNER, projectId, sourceId);
+            return record ? json(res, 200, record) : json(res, 404, { error: "Source not found" });
+          }
+          if (req.method === "DELETE")
+            return json(res, 200, { deleted: store.deleteSource(OWNER, projectId, sourceId) });
         }
         if (parts.length === 4 && parts[3] === "clone" && req.method === "POST") {
           const copy = { ...project, id: randomUUID(), title: project.title + " copy",
