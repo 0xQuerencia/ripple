@@ -15,6 +15,7 @@ const scenario = createPricingScenario({ world, projectId: "p",
   ] });
 const snapshot = (id, price, count) => {
   const next = structuredClone(world);
+  next.tick = 4;
   next.variables.currentPrice = price;
   next.entities[1].attributes.customers = count;
   return {
