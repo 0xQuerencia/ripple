@@ -67,3 +67,42 @@ test("saved simulated decisions have a graph, report and comparable outcomes", a
   await expect(page.getByRole("region", { name: "Run comparison" }))
     .toContainText("currentPrice");
 });
+
+test("reviewed evidence can be linked to scenario inputs without promoting it to fact", async ({ page, request }) => {
+  const project = (await post(request, "/api/projects",
+    { title: "Evidence-linked scenario " + Date.now() })).project;
+  const root = "/api/projects/" + project.id;
+  const source = (await post(request, root + "/sources", {
+    filename: "pricing.txt", content: "Current price: 499\nMonthly churn: 5%"
+  })).source;
+  const extracted = await post(request, root + "/sources/" + source.id + "/extract", {});
+  const [priceClaim, churnClaim] = extracted.claims;
+  for (const claim of [priceClaim, churnClaim]) {
+    const response = await request.patch(root + "/claims/" + claim.id,
+      { data: { decision: "accept" } });
+    expect(response.ok(), await response.text()).toBe(true);
+  }
+  await page.goto("/");
+  await page.getByRole("button", { name: "simulation", exact: true }).click();
+  await page.getByLabel("Simulation project").selectOption(project.id);
+  await page.getByLabel("Decision question").fill("Is a higher price a good idea?");
+  await page.getByLabel("company or product").fill("Example");
+  await page.getByLabel("current price").fill("499");
+  await expect(page.getByLabel("Price evidence")).toBeVisible();
+  await page.getByLabel("Price evidence").selectOption(priceClaim.id);
+  await page.getByLabel("segment", { exact: true }).fill("Subscribers");
+  await page.getByLabel("customers").fill("100");
+  await page.getByLabel("historical monthly churn %").fill("5");
+  await page.getByLabel("Evidence for Subscribers").selectOption(churnClaim.id);
+  await page.getByLabel("new price").nth(0).fill("599");
+  await page.getByLabel("new price").nth(1).fill("599");
+  await page.getByRole("button", { name: "save scenario" }).click();
+  await expect(page.getByText("scenario saved. compare it with the baseline.")).toBeVisible();
+  const response = await request.get(root + "/scenarios");
+  expect(response.ok()).toBe(true);
+  const saved = (await response.json()).scenarios[0];
+  expect(saved.baselineState.entities[0].sourceClaimIds).toEqual([priceClaim.id]);
+  expect(saved.baselineState.entities[1].sourceClaimIds).toEqual([churnClaim.id]);
+  expect(saved.baselineState.entities[0].provenance).toBe("assumption");
+  expect(saved.baselineState.entities[1].provenance).toBe("assumption");
+});
