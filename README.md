@@ -56,7 +56,7 @@ npm run evaluate
 
 ## Deployment status
 
-Public Vercel and Docker deployments currently serve **Quick Ripple only**. Simulation projects, sources and worker APIs are **local-only**, without hosted authentication or a PostgreSQL adapter. Do not expose them as a public multi-user service.
+Public Vercel and the default Docker deployment serve **Quick Ripple only**. A [private, single-owner server deployment](docs/PRIVATE_HOSTING.md) is available for an authenticated simulation lab. Simulation projects, sources and worker APIs are **local-only**, without hosted authentication or a PostgreSQL adapter. Do not expose them as a public multi-user service.
 
 This is a local experimental release, not a validated or production-ready v1.0. Missing items include PDF ingestion, hosted storage and workers, real historical benchmark cases and verified customer-behavior calibration.
 

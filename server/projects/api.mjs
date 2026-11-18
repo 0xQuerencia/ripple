@@ -9,6 +9,7 @@ const json = (res, code, value) => {
 };
 
 export function isLocal(req) {
+  if (req.ripplePrivateAccessVerified === true) return true;
   const address = req.socket?.remoteAddress ?? "";
   let host, expectedOrigin;
   try {

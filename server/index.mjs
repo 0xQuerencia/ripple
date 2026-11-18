@@ -10,6 +10,8 @@ import { createSimulationApi } from "./simulation/api.mjs";
 import { startLocalSimulationWorker } from "./simulation/localWorker.mjs";
 import { settingsFromEnv } from "./config.mjs";
 import { SECURITY_HEADERS } from "./security.mjs";
+import { isLocal } from "./projects/api.mjs";
+import { createPrivateAccessVerifier, isPrivateApiPath } from "./security/privateAccess.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 try {
@@ -29,6 +31,7 @@ const projectApi = createProjectApi(store);
 const queue = new SqliteJobQueue(store);
 const simulationApi = createSimulationApi(store, queue);
 const stopSimulationWorker = startLocalSimulationWorker(store, queue);
+const verifyPrivateAccess = createPrivateAccessVerifier();
 
 const TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -69,16 +72,26 @@ async function serveStatic(req, res) {
   res.end(await readFile(file));
 }
 
-const server = createServer((req, res) => {
+const server = createServer(async (req, res) => {
+  if (isPrivateApiPath(req.url || "") && !isLocal(req)) {
+    const verified = await verifyPrivateAccess(req);
+    if (!verified) {
+      res.writeHead(403, { "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store" });
+      res.end(JSON.stringify({ error: "Private access required" }));
+      return;
+    }
+    req.ripplePrivateAccessVerified = true;
+  }
   simulationApi(req, res, () =>
     projectApi(req, res, () =>
       api(req, res, () =>
-      serveStatic(req, res).catch(() => {
-        res.writeHead(500);
-        res.end();
-      }),
-    ),
-    ),
+        serveStatic(req, res).catch(() => {
+          res.writeHead(500);
+          res.end();
+        })
+      )
+    )
   );
 });
 

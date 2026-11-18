@@ -1,0 +1,25 @@
+name: ripple-lab
+services:
+  ripple:
+    build: .
+    image: ripple:private-lab
+    restart: unless-stopped
+    env_file: .env.private
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8787
+      RIPPLE_DB_PATH: /data/ripple.sqlite
+      TRUSTED_PROXY_HOPS: 1
+    ports:
+      - "127.0.0.1:18787:8787"
+    volumes:
+      - ripple_private_data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+volumes:
+  ripple_private_data:
