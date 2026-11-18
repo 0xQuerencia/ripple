@@ -155,6 +155,21 @@ export class SqliteEventStore {
     return { state, seq: cursor, stateHash: hashState(state) };
   }
 
+  updateProject(ownerId, projectId, title) {
+    const previous = this.getProject(ownerId, projectId);
+    if (!previous) return null;
+    const updated = { ...previous, title, updatedAt: new Date().toISOString() };
+    validateProject(updated);
+    this.db.prepare("UPDATE projects SET payload = ? WHERE id = ? AND owner_id = ?")
+      .run(JSON.stringify(updated), projectId, ownerId);
+    return updated;
+  }
+
+  deleteRun(ownerId, runId) {
+    return this.db.prepare("DELETE FROM runs WHERE id = ? AND owner_id = ?")
+      .run(runId, ownerId).changes > 0;
+  }
+
   deleteProject(ownerId, projectId) {
     return this.db.prepare("DELETE FROM projects WHERE id = ? AND owner_id = ?")
       .run(projectId, ownerId).changes > 0;

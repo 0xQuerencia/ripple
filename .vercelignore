@@ -11,3 +11,5 @@ playwright-report
 artifacts
 tests
 docs
+
+ripple-local.sqlite*

@@ -2,6 +2,7 @@ const TABS = [
   ["world", "the world"],
   ["journal", "journal"],
   ["compare", "compare"],
+  ["projects", "projects"],
 ];
 
 function EngineNote({ engine }) {

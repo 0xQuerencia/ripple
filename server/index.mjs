@@ -3,6 +3,8 @@ import { readFile, stat } from "node:fs/promises";
 import { extname, join, normalize, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createApi } from "./api.mjs";
+import { createProjectApi } from "./projects/api.mjs";
+import { SqliteEventStore } from "./storage/sqlite.mjs";
 import { settingsFromEnv } from "./config.mjs";
 import { SECURITY_HEADERS } from "./security.mjs";
 
@@ -19,6 +21,8 @@ const host = process.env.HOST || "0.0.0.0";
 
 const settings = settingsFromEnv();
 const api = createApi(settings);
+const store = new SqliteEventStore(process.env.RIPPLE_DB_PATH || "./ripple-local.sqlite");
+const projectApi = createProjectApi(store);
 
 const TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -60,11 +64,13 @@ async function serveStatic(req, res) {
 }
 
 const server = createServer((req, res) => {
-  api(req, res, () =>
-    serveStatic(req, res).catch(() => {
-      res.writeHead(500);
-      res.end();
-    }),
+  projectApi(req, res, () =>
+    api(req, res, () =>
+      serveStatic(req, res).catch(() => {
+        res.writeHead(500);
+        res.end();
+      }),
+    ),
   );
 });
 

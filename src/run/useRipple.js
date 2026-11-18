@@ -154,6 +154,16 @@ function reducer(state, action) {
         presentationStatus: cursor < state.events.length ? "replaying" : "paused",
       };
     }
+    case "restore":
+      return {
+        ...IDLE,
+        ...action.run,
+        status: "done",
+        jobStatus: "done",
+        presentationStatus: "paused",
+        cursor: action.run.events.length,
+        live: false,
+      };
     case "reset":
       return IDLE;
     default:
@@ -321,5 +331,10 @@ export function useRipple({ onProblem }) {
     }
   }, [clearTimer, drain, state.presentationStatus, state.replaying, state.status]);
 
-  return { state, begin, reset, stop, scrub, step, togglePlay };
+  const restore = useCallback((run) => {
+    clearRun();
+    dispatch({ type: "restore", run });
+  }, [clearRun]);
+
+  return { state, begin, reset, stop, restore, scrub, step, togglePlay };
 }
