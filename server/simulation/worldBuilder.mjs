@@ -11,7 +11,7 @@ function approvedClaimIds(claims) {
 }
 
 export function buildWorld({ project, claims = [], companyName, segments = [],
-  baselinePrice, marketingBudget = 0, relationships = [], assumptions = [] }) {
+  baselinePrice, marketingBudget = 0, relationships = [], assumptions = [], companySourceClaimIds = [] }) {
   if (!project?.id || !project.ownerId) throw new Error("Project is required");
   if (typeof companyName !== "string" || !companyName.trim() || companyName.length > 160)
     throw new Error("Name the company or product");
@@ -32,7 +32,8 @@ export function buildWorld({ project, claims = [], companyName, segments = [],
   });
   const company = {
     ...base("company"), kind: "company", label: companyName.trim(),
-    attributes: { baselinePrice }, provenance: "assumption", sourceClaimIds: []
+    attributes: { baselinePrice }, provenance: "assumption",
+    sourceClaimIds: requiredClaims(companySourceClaimIds)
   };
   const entities = [company];
   const edges = [];

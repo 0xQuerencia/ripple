@@ -42,3 +42,18 @@ test("reviewed claims can be linked but conflicting claims are blocked", () => {
     claims: [observed("claim-1", "Price: 499"), observed("claim-2", "Price: 599")],
     segments: [segment(["claim-1"])] }), /unreviewed/);
 });
+
+test("world entities retain approved source references without changing provenance", () => {
+  const reviewed = { id: "price-fact", text: "Current price: 499",
+    reviewed: true, rejected: false, confidenceStatus: "reviewed" };
+  const segmentFact = { id: "segment-fact", text: "Subscribers: 300",
+    reviewed: true, rejected: false, confidenceStatus: "reviewed" };
+  const state = buildWorld({ ...input, claims: [reviewed, segmentFact],
+    companySourceClaimIds: ["price-fact"], segments: [segment(["segment-fact"])] });
+  assert.deepEqual(state.entities[0].sourceClaimIds, ["price-fact"]);
+  assert.deepEqual(state.entities[1].sourceClaimIds, ["segment-fact"]);
+  assert.equal(state.entities[0].provenance, "assumption");
+  assert.equal(state.entities[1].provenance, "assumption");
+  assert.throws(() => buildWorld({ ...input, claims: [reviewed],
+    companySourceClaimIds: ["unknown"] }), /unreviewed/);
+});

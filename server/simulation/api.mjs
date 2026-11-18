@@ -91,6 +91,7 @@ export function createSimulationApi(store, queue) {
             const world = buildWorld({
               project, claims: store.listClaims(OWNER, projectId),
               companyName: input.companyName, baselinePrice: input.baselinePrice,
+              companySourceClaimIds: input.companySourceClaimIds || [],
               marketingBudget: input.marketingBudget ?? 0, segments: input.segments,
               relationships: input.relationships || [], assumptions: input.assumptions || []
             });
