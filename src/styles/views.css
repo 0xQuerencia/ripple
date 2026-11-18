@@ -193,3 +193,35 @@
 }
 .evidence code, .evidence small { color: var(--ink-2); }
 .evidence .conflicted { text-decoration: underline wavy var(--accent); }
+
+.simulation-lab {
+  min-height: 0; overflow-y: auto; padding: 36px clamp(16px, 4vw, 48px) 28px;
+  display: grid; align-content: start; gap: 24px;
+}
+.simulation-lab h2 { font-size: 34px; line-height: 1.05; }
+.simulation-lab h3 { font-size: 24px; }
+.simulation-lab p { color: var(--ink-2); }
+.simulation-lab form, .simulation-results {
+  display: grid; gap: 15px; align-content: start;
+  border: 3px solid var(--line); border-radius: 8px;
+  background: var(--paper); padding: 16px;
+}
+.simulation-lab label { display: grid; gap: 5px; min-width: 0; }
+.simulation-lab input, .simulation-lab select, .simulation-lab textarea {
+  border: 2px solid var(--line); border-radius: 4px; padding: 9px;
+  background: var(--bg); color: var(--ink); font: inherit; min-width: 0; width: 100%;
+}
+.simulation-lab textarea { min-height: 90px; resize: vertical; }
+.simulation-fields { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; }
+.simulation-fields label { flex: 1 1 150px; }
+.simulation-option {
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+  padding: 10px 0; border-bottom: 2px dashed var(--line);
+}
+.simulation-option strong { flex: 1 1 150px; }
+.simulation-timeline { display: grid; gap: 12px; max-height: 340px; overflow-y: auto; }
+.simulation-timeline li {
+  display: grid; gap: 3px; padding: 10px;
+  border-left: 3px solid var(--line); background: var(--bg);
+}
+.simulation-timeline small { color: var(--ink-2); }

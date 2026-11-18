@@ -7,6 +7,7 @@ import { FieldNotes } from "./notes/FieldNotes.jsx";
 import { JournalView } from "./notes/JournalView.jsx";
 import { CompareView } from "./notes/CompareView.jsx";
 import { ProjectHistory } from "./simulation/ProjectHistory.jsx";
+import { SimulationLab } from "./simulation/SimulationLab.jsx";
 import { HelpDialog } from "./ui/HelpDialog.jsx";
 import { LiveThinking } from "./run/LiveThinking.jsx";
 import { useRipple } from "./run/useRipple.js";
@@ -18,6 +19,7 @@ const FRAME_LABEL = {
   journal: "the journal",
   compare: "compare",
   projects: "projects",
+  simulation: "simulation",
 };
 
 export default function App() {
@@ -150,6 +152,7 @@ export default function App() {
                 }}
               />
             )}
+            {tab === "simulation" && <SimulationLab />}
             {tab === "projects" && (
               <ProjectHistory
                 current={run}

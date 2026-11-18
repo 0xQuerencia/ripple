@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { validateProject, validateRun, validateEvent, validateCheckpoint, validateSource, validateClaim } from "../../shared/simulation/schema.mjs";
+import { validateProject, validateRun, validateEvent, validateCheckpoint, validateSource, validateClaim, validateScenario } from "../../shared/simulation/schema.mjs";
 import { hashState } from "./stateHash.mjs";
 
 const TABLES = [
@@ -278,6 +278,40 @@ export class SqliteEventStore {
     this.initClaims();
     return this.db.prepare("DELETE FROM claims WHERE id = ? AND owner_id = ? AND project_id = ?")
       .run(claimId, ownerId, projectId).changes > 0;
+  }
+
+  initScenarios() {
+    this.db.exec("CREATE TABLE IF NOT EXISTS scenarios (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE, payload TEXT NOT NULL)");
+    this.db.exec("CREATE INDEX IF NOT EXISTS idx_scenarios_project ON scenarios(owner_id, project_id)");
+  }
+
+  putScenario(ownerId, projectId, scenario) {
+    this.initScenarios();
+    validateScenario(scenario);
+    if (scenario.ownerId !== ownerId || scenario.projectId !== projectId ||
+        !this.getProject(ownerId, projectId)) throw new Error("Project not found");
+    const row = this.db.prepare("SELECT payload FROM scenarios WHERE id = ?").get(scenario.id);
+    if (row) {
+      if (row.payload !== JSON.stringify(scenario)) throw new Error("Conflicting scenario");
+      return scenario;
+    }
+    this.db.prepare("INSERT INTO scenarios VALUES (?, ?, ?, ?)")
+      .run(scenario.id, ownerId, projectId, JSON.stringify(scenario));
+    return scenario;
+  }
+
+  getScenario(ownerId, scenarioId) {
+    this.initScenarios();
+    const row = this.db.prepare("SELECT payload FROM scenarios WHERE id = ? AND owner_id = ?")
+      .get(scenarioId, ownerId);
+    return row ? JSON.parse(row.payload) : null;
+  }
+
+  listScenarios(ownerId, projectId) {
+    this.initScenarios();
+    if (!this.getProject(ownerId, projectId)) return [];
+    return this.db.prepare("SELECT payload FROM scenarios WHERE owner_id = ? AND project_id = ? ORDER BY rowid DESC")
+      .all(ownerId, projectId).map((row) => JSON.parse(row.payload));
   }
 
   updateProject(ownerId, projectId, title) {

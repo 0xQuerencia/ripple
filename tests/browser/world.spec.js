@@ -311,3 +311,28 @@ test("clicking a map node shows the same causal path as the journal", async ({ p
   await page.locator(".journal-entry").last().click();
   await expect(trail).toHaveText(pathBefore);
 });
+
+test("a local pricing decision runs from the setup screen without editing JSON", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.getByRole("button", { name: "projects", exact: true }).click();
+  await page.getByRole("textbox", { name: "New project title" }).fill("Scenario smoke");
+  await page.getByRole("button", { name: "new project" }).click();
+  await expect(page.getByRole("button", { name: "Scenario smoke" })).toBeVisible();
+  await page.getByRole("button", { name: "simulation", exact: true }).click();
+  await page.getByLabel("Simulation project").selectOption({ label: "Scenario smoke" });
+  await page.getByLabel("Decision question").fill("Should we raise our price?");
+  await page.getByLabel("company or product").fill("Sample");
+  await page.getByLabel("current price").fill("499");
+  await page.getByLabel("segment", { exact: true }).fill("Customers");
+  await page.getByLabel("customers").fill("100");
+  await page.getByLabel("historical monthly churn %").fill("5");
+  await page.getByLabel("new price").nth(0).fill("599");
+  await page.getByLabel("new price").nth(1).fill("599");
+  await page.getByRole("button", { name: "save scenario" }).click();
+  await expect(page.getByText("scenario saved. compare it with the baseline.")).toBeVisible();
+  await page.getByRole("button", { name: "run baseline" }).click();
+  await expect(page.getByTestId("simulation-job-status")).toContainText("done", {
+    timeout: 20_000
+  });
+});

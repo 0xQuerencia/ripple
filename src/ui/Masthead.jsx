@@ -3,6 +3,7 @@ const TABS = [
   ["journal", "journal"],
   ["compare", "compare"],
   ["projects", "projects"],
+  ["simulation", "simulation"],
 ];
 
 function EngineNote({ engine }) {
