@@ -154,7 +154,8 @@ test("a judge can just start typing a brand new question and watch Gemma work", 
 
 test("shift+enter adds a line instead of sending", async ({ page }) => {
   await page.goto("/");
-  await page.keyboard.type("first line");
+  await expect(page.locator("#ask-text")).toBeFocused();
+  await page.locator("#ask-text").fill("first line");
   await page.keyboard.press("Shift+Enter");
   await page.keyboard.type("second line");
   await expect(page.locator("#ask-text")).toHaveValue(

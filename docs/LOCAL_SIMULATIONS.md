@@ -14,11 +14,11 @@ Under **Projects**:
 Under **Simulation**:
 1. Pick the project and describe your real choice.
 2. Enter a current price, budget, customer-segment counts and observed historical churn rates.
-3. Enter two alternatives, including how much of the base you want to roll out to.
-4. Save a scenario and run a baseline and one or both interventions.
-5. Inspect the timeline, pixel graph, agent observations and rejected actions.
-6. Compare completed runs. Fork the last saved checkpoint to adjust an assumption.
-7. Prepare a report, verify provenance labels and export Markdown or JSON.
+3. Optionally link accepted source claims to the current price and customer segments. The values still come from your inputs; a source link is a citation, not automatic numeric verification.\n4. Enter two alternatives, including how much of the base you want to roll out to.
+5. Save a scenario and run a baseline and one or both interventions.
+6. Inspect the timeline, pixel graph, agent observations and rejected actions.
+7. Compare completed runs. Fork the last saved checkpoint to adjust an assumption.
+8. Prepare a report, verify provenance labels and export Markdown or JSON.
 
 Each simulation is bounded to **1–12 rounds and up to 19 customer segments plus the company**. The default agent behavior uses deterministic rules, not live LLM agents. Each action is validated and applied by a reducer. These simulations are still hypothetical.
 
