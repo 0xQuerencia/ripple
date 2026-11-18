@@ -60,3 +60,28 @@ test("project API only accepts local requests", async () => {
       { origin: "https://attacker.example" })).status, 403);
   } finally { store.close(); }
 });
+
+test("Quick Ripple history cannot display or delete simulation runs", async () => {
+  const store = new SqliteEventStore();
+  try {
+    const api = createProjectApi(store);
+    const created = await request(api, "POST", "/api/projects",
+      { title: "Experiment separation" });
+    const projectId = created.body.project.id;
+    const at = new Date().toISOString();
+    const simulatedRun = {
+      schemaVersion: 1, ownerId: "local", id: "sim-only", createdAt: at,
+      scenarioId: "scenario-1", seed: 1, modelId: "rules",
+      promptVersion: "v1", engineVersion: "v1", status: "queued",
+      budget: { maxCalls: 0, maxTokens: 0 }, spent: { calls: 0, tokens: 0 },
+      checkpointTick: 0, startedAt: null, completedAt: null
+    };
+    store.putRun("local", projectId, simulatedRun);
+    const list = await request(api, "GET", "/api/projects/" + projectId + "/runs");
+    assert.equal(list.status, 200);
+    assert.deepEqual(list.body.runs, []);
+    assert.equal((await request(api, "GET", "/api/saved-runs/sim-only")).status, 404);
+    assert.equal((await request(api, "DELETE", "/api/saved-runs/sim-only")).status, 404);
+    assert.ok(store.getRun("local", "sim-only"));
+  } finally { store.close(); }
+});
