@@ -1,3 +1,4 @@
+import { compareSimulationRuns, forkScenarioAtCheckpoint } from "../../shared/simulation/diff.mjs";
 import { randomUUID } from "node:crypto";
 import { isLocal } from "../projects/api.mjs";
 import { buildWorld } from "./worldBuilder.mjs";
@@ -139,6 +140,41 @@ export function createSimulationApi(store, queue) {
           operation.call(queue, OWNER, job.id);
           return send(res, 200, { job: queue.get(OWNER, job.id) });
         }
+      }
+      if (isRun && parts.length === 3 && parts[2] === "compare" && req.method === "POST") {
+        const input = await bodyOf(req);
+        const a = store.getRun(OWNER, input.baselineRunId);
+        const b = store.getRun(OWNER, input.alternativeRunId);
+        if (!a || !b || a.scenarioId !== b.scenarioId)
+          return send(res, 404, { error: "Run pair not found" });
+        const scenario = store.getScenario(OWNER, a.scenarioId);
+        if (!scenario) return send(res, 404, { error: "Scenario not found" });
+        const read = (run) => ({
+          run, checkpoint: store.getCheckpoint(OWNER, run.id),
+          events: store.readEvents(OWNER, run.id, { limit: 1000 })
+        });
+        return send(res, 200, { comparison: compareSimulationRuns(scenario, read(a), read(b)) });
+      }
+      if (isRun && parts.length === 4 && parts[3] === "fork" && req.method === "POST") {
+        const run = store.getRun(OWNER, parts[2]);
+        if (!run) return send(res, 404, { error: "Run not found" });
+        const source = store.getCheckpoint(OWNER, run.id);
+        const original = store.getScenario(OWNER, run.scenarioId);
+        if (!source || !original)
+          return send(res, 404, { error: "Checkpoint unavailable" });
+        const input = await bodyOf(req);
+        const id = randomUUID();
+        const createdAt = new Date().toISOString();
+        const fork = forkScenarioAtCheckpoint({
+          originalScenario: original, checkpoint: source,
+          overrides: input.changes, label: input.label, id, createdAt
+        });
+        if (store.listScenarios(OWNER, original.projectId).length >= 50)
+          throw new Error("Too many scenarios in this project");
+        store.putScenario(OWNER, original.projectId, fork);
+        return send(res, 201, { scenario: fork, from: {
+          runId: run.id, tick: source.tick
+        } });
       }
       if (isRun && parts.length === 3 && req.method === "GET") {
         const run = store.getRun(OWNER, parts[2]);

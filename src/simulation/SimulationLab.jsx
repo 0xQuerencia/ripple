@@ -26,6 +26,9 @@ export function SimulationLab() {
   const [scenario, setScenario] = useState(null);
   const [indicators, setIndicators] = useState(null);
   const [history, setHistory] = useState([]);
+  const [compareBaseline, setCompareBaseline] = useState("");
+  const [compareAlternative, setCompareAlternative] = useState("");
+  const [comparison, setComparison] = useState(null);
   const [company, setCompany] = useState("");
   const [question, setQuestion] = useState("");
   const [basePrice, setBasePrice] = useState("");
@@ -76,6 +79,7 @@ export function SimulationLab() {
       setScenario(null);
       setIndicators(null);
       setHistory([]);
+      setComparison(null);
       return;
     }
     let live = true;
@@ -176,6 +180,39 @@ export function SimulationLab() {
       const data = await api(path, "POST", { interventionId });
       openJob(data.job.id);
       setNotice("your simulation is running locally.");
+    });
+  }
+
+  async function compareRuns() {
+    await runTask(async () => {
+      const result = await api("/api/simulation-runs/compare", "POST", {
+        baselineRunId: compareBaseline, alternativeRunId: compareAlternative
+      });
+      setComparison(result.comparison);
+    });
+  }
+
+  async function forkCurrentRun() {
+    if (!job?.runId || !checkpoint) return;
+    const entered = window.prompt("new price to try", String(
+      checkpoint.serializedState.world.variables.currentPrice
+    ));
+    if (entered === null) return;
+    const price = Number(entered);
+    if (!Number.isFinite(price) || price <= 0) {
+      setNotice("Enter a positive price.");
+      return;
+    }
+    const label = window.prompt("name this experiment", "a smaller change");
+    if (label === null || !label.trim()) return;
+    await runTask(async () => {
+      const response = await api("/api/simulation-runs/" + job.runId + "/fork", "POST", {
+        changes: { currentPrice: price }, label
+      });
+      await loadScenarios();
+      setScenarioId(response.scenario.id);
+      setComparison(null);
+      setNotice("forked at round " + response.from.tick + ". the original run is untouched.");
     });
   }
 
@@ -329,6 +366,50 @@ export function SimulationLab() {
                   ))}
                 </ul>
               </details>
+              <h3>compare two completed runs</h3>
+              <div className="simulation-fields">
+                <label>baseline experiment
+                  <select aria-label="Compare baseline" value={compareBaseline}
+                    onChange={(event) => setCompareBaseline(event.target.value)}>
+                    <option value="">pick a run</option>
+                    {history.filter((item) => item.job?.status === "done").map((item) =>
+                      <option key={item.id} value={item.id}>
+                        {item.interventionId} · {item.id.slice(0, 8)}
+                      </option>)}
+                  </select>
+                </label>
+                <label>alternative experiment
+                  <select aria-label="Compare alternative" value={compareAlternative}
+                    onChange={(event) => setCompareAlternative(event.target.value)}>
+                    <option value="">pick a run</option>
+                    {history.filter((item) => item.job?.status === "done").map((item) =>
+                      <option key={item.id} value={item.id}>
+                        {item.interventionId} · {item.id.slice(0, 8)}
+                      </option>)}
+                  </select>
+                </label>
+                <button type="button" className="text-button"
+                  disabled={busy || !compareBaseline || !compareAlternative ||
+                    compareBaseline === compareAlternative}
+                  onClick={compareRuns}>compare runs</button>
+              </div>
+              {comparison && (
+                <section className="simulation-diff" aria-label="Run comparison">
+                  <h3>what changed?</h3>
+                  <p>recorded state differences. not a probability estimate.</p>
+                  {comparison.changedVariables.length === 0 &&
+                    comparison.changedEntities.length === 0 &&
+                    <p>no measured state differences in these runs.</p>}
+                  {comparison.changedVariables.map((item) =>
+                    <p key={item.key}>{item.key}: {String(item.baseline)} to {String(item.alternative)}</p>)}
+                  {comparison.changedEntities.map((item) =>
+                    <p key={item.id}>{item.id}: {JSON.stringify(item.baseline)} to {JSON.stringify(item.alternative)}</p>)}
+                  {comparison.changedResources.map((item) =>
+                    <p key={item.key}>{item.key}: {String(item.baseline)} to {String(item.alternative)}</p>)}
+                  <p>rounds: {comparison.tickCounts.baseline} vs {comparison.tickCounts.alternative}</p>
+                  {comparison.limitations.map((line) => <small key={line}>{line}</small>)}
+                </section>
+              )}
               <h3>saved experiments</h3>
               {history.map((item) => (
                 <div className="simulation-option" key={item.id}>
@@ -343,6 +424,10 @@ export function SimulationLab() {
             <div className="simulation-results">
               <h3>rounds in motion</h3>
               <p data-testid="simulation-job-status">{job.status} · {events.length} events</p>
+              {checkpoint && job.status === "done" && (
+                <button type="button" className="text-button" disabled={busy}
+                  onClick={forkCurrentRun}>fork from this checkpoint</button>
+              )}
               <RunControls
                 job={job} checkpoint={checkpoint} currentTick={displayTick}
                 replaying={replaying}
