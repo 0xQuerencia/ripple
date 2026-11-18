@@ -1,3 +1,4 @@
+import { EvidenceReview } from "./EvidenceReview.jsx";
 import { useCallback, useEffect, useState } from "react";
 
 async function call(path, method = "GET", data) {
@@ -97,6 +98,7 @@ export function ProjectHistory({ current, onOpen }) {
               </div>
             ))}
           </div>
+          {chosen && <EvidenceReview projectId={chosen.id} />}
           {chosen && (
             <div className="history-runs">
               <div className="history-actions">

@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { validateProject, validateRun, validateEvent, validateCheckpoint, validateSource } from "../../shared/simulation/schema.mjs";
+import { validateProject, validateRun, validateEvent, validateCheckpoint, validateSource, validateClaim } from "../../shared/simulation/schema.mjs";
 import { hashState } from "./stateHash.mjs";
 
 const TABLES = [
@@ -189,8 +189,95 @@ export class SqliteEventStore {
 
   deleteSource(ownerId, projectId, sourceId) {
     this.initSources();
-    return this.db.prepare("DELETE FROM sources WHERE id = ? AND owner_id = ? AND project_id = ?")
-      .run(sourceId, ownerId, projectId).changes > 0;
+    const record = this.getSource(ownerId, projectId, sourceId);
+    if (!record) return false;
+    this.initClaims();
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      for (const claim of this.listClaims(ownerId, projectId)) {
+        if (claim.sourceSpans.some((span) => span.sourceId === sourceId))
+          this.deleteClaim(ownerId, projectId, claim.id);
+      }
+      const removed = this.db.prepare("DELETE FROM sources WHERE id = ? AND owner_id = ? AND project_id = ?")
+        .run(sourceId, ownerId, projectId).changes > 0;
+      this.db.exec("COMMIT");
+      return removed;
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
+  }
+
+  initClaims() {
+    this.db.exec("CREATE TABLE IF NOT EXISTS claims (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE, payload TEXT NOT NULL)");
+    this.db.exec("CREATE INDEX IF NOT EXISTS idx_claims_project ON claims(owner_id, project_id)");
+  }
+
+  putClaims(ownerId, projectId, claims) {
+    this.initClaims();
+    if (!this.getProject(ownerId, projectId) || !Array.isArray(claims) || claims.length > 200)
+      throw new Error("Invalid claims batch");
+    const existing = this.listClaims(ownerId, projectId);
+    const spans = new Set(existing.map((claim) => {
+      const span = claim.sourceSpans[0];
+      return span?.sourceId + ":" + (span?.row ?? span?.charStart);
+    }));
+    const insert = this.db.prepare("INSERT INTO claims VALUES (?, ?, ?, ?)");
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      for (const claim of claims) {
+        validateClaim(claim);
+        if (claim.ownerId !== ownerId || claim.projectId !== projectId)
+          throw new Error("Claim ownership mismatch");
+        for (const span of claim.sourceSpans) {
+          if (!this.getSource(ownerId, projectId, span.sourceId))
+            throw new Error("Source not found");
+        }
+        const span = claim.sourceSpans[0];
+        const key = span?.sourceId + ":" + (span?.row ?? span?.charStart);
+        if (spans.has(key)) continue;
+        insert.run(claim.id, ownerId, projectId, JSON.stringify(claim));
+        spans.add(key);
+      }
+      this.db.exec("COMMIT");
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
+    return this.listClaims(ownerId, projectId);
+  }
+
+  listClaims(ownerId, projectId) {
+    this.initClaims();
+    if (!this.getProject(ownerId, projectId)) return [];
+    return this.db.prepare("SELECT payload FROM claims WHERE owner_id = ? AND project_id = ? ORDER BY rowid")
+      .all(ownerId, projectId).map((row) => JSON.parse(row.payload));
+  }
+
+  updateClaim(ownerId, projectId, claimId, { text, decision }) {
+    this.initClaims();
+    const row = this.db.prepare("SELECT payload FROM claims WHERE id = ? AND owner_id = ? AND project_id = ?")
+      .get(claimId, ownerId, projectId);
+    if (!row) return null;
+    if (!["accept", "reject", "pending"].includes(decision)) throw new Error("Invalid review decision");
+    const prior = JSON.parse(row.payload);
+    if (text !== undefined && (typeof text !== "string" || !text.trim() || text.length > 2000))
+      throw new Error("Invalid claim text");
+    const edited = text !== undefined && text.trim() !== prior.text;
+    const updated = { ...prior, text: text === undefined ? prior.text : text.trim(),
+      provenance: edited ? "assumption" : prior.provenance,
+      reviewed: decision === "accept", rejected: decision === "reject",
+      confidenceStatus: decision === "accept" ? "reviewed" : "unverified" };
+    validateClaim(updated);
+    this.db.prepare("UPDATE claims SET payload = ? WHERE id = ? AND owner_id = ? AND project_id = ?")
+      .run(JSON.stringify(updated), claimId, ownerId, projectId);
+    return updated;
+  }
+
+  deleteClaim(ownerId, projectId, claimId) {
+    this.initClaims();
+    return this.db.prepare("DELETE FROM claims WHERE id = ? AND owner_id = ? AND project_id = ?")
+      .run(claimId, ownerId, projectId).changes > 0;
   }
 
   updateProject(ownerId, projectId, title) {
