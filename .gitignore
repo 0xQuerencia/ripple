@@ -13,5 +13,6 @@ test-results/
 .vercel
 .env*
 !.env.example
+!.env.private.example
 
 ripple-local.sqlite*
