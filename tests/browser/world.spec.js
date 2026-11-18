@@ -297,3 +297,17 @@ test("partial terminal markers are visible to readers", async ({ page }) => {
   await page.getByTestId("cause-blackout").click();
   await expect(page.locator(".playback-status")).toContainText("incomplete");
 });
+
+test("clicking a map node shows the same causal path as the journal", async ({ page }) => {
+  await reduceMotion(page);
+  await page.goto("/");
+  await page.getByTestId("cause-blackout").click();
+  await settled(page);
+  await page.locator(".system-node .node-face").last().click();
+  const trail = page.getByTestId("ancestry").locator("li");
+  expect(await trail.count()).toBeGreaterThan(1);
+  const pathBefore = await trail.allTextContents();
+  await page.getByRole("button", { name: "journal", exact: true }).click();
+  await page.locator(".journal-entry").last().click();
+  await expect(trail).toHaveText(pathBefore);
+});

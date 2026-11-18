@@ -113,3 +113,19 @@ test("summarize reports reach, areas, severity and timing", () => {
   assert.equal(s.timeframe.days, 2);
   assert.equal(summarize([origin]).total, 0);
 });
+
+test("dense maps keep the minimum gap when the normal search is exhausted", () => {
+  const events = [origin, ...Array.from({ length: 180 }, (_, i) => ({
+    targetId: `dense-${i}`, sourceId: "o", round: 1,
+  }))];
+  const positions = [...layoutRipple(events).values()];
+  for (let i = 0; i < positions.length; i++) {
+    for (let j = i + 1; j < positions.length; j++) {
+      const a = positions[i], b = positions[j];
+      assert.ok(Math.hypot(a.x - b.x, a.y - b.y) >= MIN_GAP - 0.001);
+    }
+  }
+  const before = layoutRipple(events.slice(0, 30));
+  const after = layoutRipple(events);
+  for (const [id, position] of before) assert.deepEqual(after.get(id), position);
+});

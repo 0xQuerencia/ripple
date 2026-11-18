@@ -16,6 +16,8 @@ const FIT = {
   maxZoom: 1,
 };
 // While Gemma is working a panel sits over the top of the map, so keep the ripple below it.
+const motionDuration = (ms) =>
+  globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? 0 : ms;
 const fitOptions = (busy) => ({
   ...FIT,
   padding: { ...FIT.padding, top: busy ? "215px" : FIT.padding.top },
@@ -67,7 +69,7 @@ export function WorldCanvas({
   useEffect(() => {
     if (!follow.current || !flow.current || !wanted.length) return undefined;
     const frame = requestAnimationFrame(() =>
-      flow.current?.fitView({ ...fitOptions(busy), duration: 600 }),
+      flow.current?.fitView({ ...fitOptions(busy), duration: motionDuration(600) }),
     );
     return () => cancelAnimationFrame(frame);
   }, [wanted.length, busy]);
@@ -142,14 +144,14 @@ export function WorldCanvas({
         <button
           type="button"
           aria-label="Zoom in"
-          onClick={() => flow.current?.zoomIn({ duration: 200 })}
+          onClick={() => flow.current?.zoomIn({ duration: motionDuration(200) })}
         >
           +
         </button>
         <button
           type="button"
           aria-label="Zoom out"
-          onClick={() => flow.current?.zoomOut({ duration: 200 })}
+          onClick={() => flow.current?.zoomOut({ duration: motionDuration(200) })}
         >
           –
         </button>
@@ -158,7 +160,7 @@ export function WorldCanvas({
           aria-label="Fit the ripple to the screen"
           onClick={() => {
             follow.current = true;
-            flow.current?.fitView({ ...fitOptions(busy), duration: 300 });
+            flow.current?.fitView({ ...fitOptions(busy), duration: motionDuration(300) });
           }}
         >
           fit
