@@ -1,3 +1,5 @@
+import { isIP } from "node:net";
+
 /**
  * Who is asking? Behind a reverse proxy every connection comes from the proxy, so the real visitor
  * has to be read from X-Forwarded-For. Each trusted proxy appends the address it saw to the right
@@ -15,5 +17,6 @@ export function clientIp(req, trustedProxyHops = 0) {
     .split(",")
     .map((part) => part.trim())
     .filter(Boolean);
-  return forwarded.at(-trustedProxyHops) ?? socketAddress;
+  const address = forwarded.at(-trustedProxyHops);
+  return address && isIP(address) ? address : socketAddress;
 }

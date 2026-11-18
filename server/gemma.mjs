@@ -10,6 +10,8 @@ import {
 export const DEFAULT_MODEL = "gemma-4-26b-a4b-it";
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 const REQUEST_TIMEOUT_MS = 120_000;
+const MAX_SSE_FRAME_BYTES = 256 * 1024;
+const MAX_SSE_TOTAL_BYTES = 4 * 1024 * 1024;
 
 const {
   rounds: MAX_ROUNDS,
@@ -98,7 +100,10 @@ export function parseModelJson(text) {
 async function* sseText(body, onUsage) {
   const decoder = new TextDecoder();
   let buffer = "";
+  let totalBytes = 0;
   for await (const chunk of body) {
+    totalBytes += typeof chunk === "string" ? Buffer.byteLength(chunk) : chunk.byteLength;
+    if (totalBytes > MAX_SSE_TOTAL_BYTES) throw new Error("Model response exceeded the stream limit");
     // Normalise the whole buffer, not each chunk: a chunk boundary can fall between \r and \n.
     buffer = (
       buffer +
@@ -109,6 +114,7 @@ async function* sseText(body, onUsage) {
     let end;
     while ((end = buffer.indexOf("\n\n")) >= 0) {
       const event = buffer.slice(0, end);
+      if (event.length > MAX_SSE_FRAME_BYTES) throw new Error("Model event exceeded the stream limit");
       buffer = buffer.slice(end + 2);
       const data = event
         .split("\n")
@@ -125,6 +131,7 @@ async function* sseText(body, onUsage) {
         continue;
       }
     }
+    if (buffer.length > MAX_SSE_FRAME_BYTES) throw new Error("Model event exceeded the stream limit");
   }
 }
 

@@ -32,15 +32,17 @@ export async function* ndjson(body) {
     const { done, value } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
-    if (buffer.length > MAX_STREAM_LINE) throw new ApiError("The answer exceeded the stream limit.", 502);
     let newline;
     while ((newline = buffer.indexOf("\n")) >= 0) {
       const text = buffer.slice(0, newline).trim();
       buffer = buffer.slice(newline + 1);
+      if (text.length > MAX_STREAM_LINE) throw new ApiError("The answer exceeded the stream limit.", 502);
       if (text) yield parseStreamEvent(text);
     }
+    if (buffer.length > MAX_STREAM_LINE) throw new ApiError("The answer exceeded the stream limit.", 502);
   }
   buffer += decoder.decode();
+  if (buffer.length > MAX_STREAM_LINE) throw new ApiError("The answer exceeded the stream limit.", 502);
   if (buffer.trim()) yield parseStreamEvent(buffer.trim());
 }
 
@@ -130,7 +132,9 @@ export async function streamRipple(request, { signal, onEvent }) {
       response.status,
     );
   }
+  let count = 0;
   for await (const event of ndjson(response.body)) {
+    if (++count > 200) throw new ApiError("The server sent too many events.", 502);
     if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
     onEvent(event);
     if (event.type === "done" || event.type === "refused") break;
