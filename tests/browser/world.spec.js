@@ -247,3 +247,53 @@ test("an answer that never starts is reported, not left hanging", async ({
   await expect(page.locator(".live")).toHaveCount(0);
   await expect(page.locator(".invite")).toBeVisible();
 });
+
+test("pausing freezes live reveals and resuming drains captured events", async ({ page }) => {
+  const first = {
+    type: "start", mode: "gemma", model: "test-model",
+    origin: {
+      targetId: "power", name: "power grid", area: "technology", icon: "power",
+      known: true, title: "power outage", description: "It begins."
+    }
+  };
+  const effects = Array.from({ length: 5 }, (_, i) => ({
+    type: "effect",
+    effect: {
+      round: 1, sourceId: i === 0 ? "power" : "effect-" + (i - 1),
+      targetId: "effect-" + i, name: "Effect " + i, area: "society",
+      icon: "sparkle", known: false, title: "Consequence " + i,
+      explanation: "A possible change.", alsoFrom: []
+    }
+  }));
+  await page.route("**/api/ripple", (route) => route.fulfill({
+    status: 200, contentType: "application/x-ndjson",
+    body: [...[first], ...effects, { type: "done" }]
+      .map((line) => JSON.stringify(line)).join("\n") + "\n",
+  }));
+  await page.goto("/");
+  await page.getByTestId("cause-blackout").click();
+  await expect(nodes(page)).toHaveCount(2);
+  await page.getByRole("button", { name: "pause", exact: true }).click();
+  const count = await nodes(page).count();
+  await page.waitForTimeout(1_100);
+  await expect(nodes(page)).toHaveCount(count);
+  await page.getByRole("button", { name: "replay", exact: true }).click();
+  await expect(page.locator(".playback-status")).toContainText("5 possible effects", {
+    timeout: 15_000,
+  });
+});
+
+test("partial terminal markers are visible to readers", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.route("**/api/ripple", (route) => route.fulfill({
+    status: 200, contentType: "application/x-ndjson",
+    body: [
+      { type: "start", mode: "gemma", model: "m",
+        origin: { targetId: "power", name: "power grid", area: "technology", icon: "power", known: true } },
+      { type: "done", partial: true },
+    ].map((line) => JSON.stringify(line)).join("\n") + "\n"
+  }));
+  await page.goto("/");
+  await page.getByTestId("cause-blackout").click();
+  await expect(page.locator(".playback-status")).toContainText("incomplete");
+});
