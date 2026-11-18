@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { WorldCanvas } from "../map/WorldCanvas.jsx";
+import { eventGraph, worldGraph } from "../map/simulationAdapter.js";
 
 async function api(path, method = "GET", payload) {
   const response = await fetch(path, {
@@ -39,6 +41,9 @@ export function SimulationLab() {
   const [jobId, setJobId] = useState("");
   const [job, setJob] = useState(null);
   const [events, setEvents] = useState([]);
+  const [checkpoint, setCheckpoint] = useState(null);
+  const [graphLayer, setGraphLayer] = useState("events");
+  const [selectedNode, setSelectedNode] = useState(null);
   const cursor = useRef(0);
 
   useEffect(() => {
@@ -88,6 +93,7 @@ export function SimulationLab() {
         const data = await api("/api/simulation-jobs/" + jobId + "?after=" + cursor.current);
         if (!live) return;
         setJob(data.job);
+        setCheckpoint(data.checkpoint);
         if (data.events.length) {
           cursor.current = data.events.at(-1).seq;
           setEvents((current) => [...current, ...data.events]);
@@ -150,6 +156,8 @@ export function SimulationLab() {
   function openJob(id) {
     cursor.current = 0;
     setEvents([]);
+    setCheckpoint(null);
+    setSelectedNode(null);
     setJob(null);
     setJobId(id);
   }
@@ -169,6 +177,14 @@ export function SimulationLab() {
       setJob(response.job);
     });
   }
+
+  const graph = useMemo(() =>
+    graphLayer === "world"
+      ? worldGraph(checkpoint?.serializedState?.world, scenario?.question)
+      : eventGraph(events, scenario?.question, job?.runId || "simulation"),
+    [graphLayer, checkpoint, events, scenario?.question, job?.runId]
+  );
+  const inspected = graph.find((item) => item.targetId === selectedNode);
 
   return (
     <section className="simulation-lab" aria-label="Simulation lab">
@@ -301,6 +317,37 @@ export function SimulationLab() {
                   <button type="button" className="text-button"
                     onClick={() => changeJob("cancel")}>cancel job</button>}
               </div>
+              <div className="history-actions">
+                <button type="button" className="text-button"
+                  aria-pressed={graphLayer === "events"}
+                  onClick={() => { setGraphLayer("events"); setSelectedNode(null); }}>event graph</button>
+                <button type="button" className="text-button"
+                  aria-pressed={graphLayer === "world"}
+                  onClick={() => { setGraphLayer("world"); setSelectedNode(null); }}>stakeholders</button>
+              </div>
+              {graph.length > 0 && (
+                <div className="simulation-graph">
+                  <WorldCanvas
+                    visible={graph}
+                    selectedId={selectedNode || graph[0].targetId}
+                    focusedEventId={inspected?.id || null}
+                    idle={false}
+                    busy={job.status === "running"}
+                    onPickNode={setSelectedNode}
+                    onDropCause={() => setNotice("Use Quick Ripple from the world tab.")}
+                    onAsk={() => {}}
+                    onRunExample={() => {}}
+                  />
+                </div>
+              )}
+              {inspected && (
+                <div className="simulation-inspector">
+                  <h3>{inspected.name}</h3>
+                  <p>{inspected.explanation}</p>
+                  <small>{inspected.provenance} · {inspected.who || "world input"}</small>
+                </div>
+              )}
+              {events.length > 96 && <p>showing the first 96 events on the map; the timeline has every event.</p>}
               <ol className="simulation-timeline">
                 {events.map((item) => <li key={item.id}>
                   <strong>round {item.tick} · {item.type.replaceAll("_", " ")}</strong>
