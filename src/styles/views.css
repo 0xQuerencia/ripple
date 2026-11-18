@@ -238,3 +238,12 @@
 .simulation-graph .canvas { width: 100%; height: 100%; }
 .simulation-inspector { display: grid; gap: 7px; }
 .simulation-inspector small { color: var(--ink-2); }
+
+.simulation-controls, .simulation-assumptions {
+  border: 2px dashed var(--line); padding: 12px;
+  display: grid; gap: 9px;
+}
+.simulation-controls input[type="range"] { flex: 1 1 180px; width: auto; }
+.simulation-assumptions summary { cursor: pointer; }
+.simulation-assumptions ul { display: grid; gap: 5px; }
+.simulation-inspector ol { display: grid; gap: 4px; }

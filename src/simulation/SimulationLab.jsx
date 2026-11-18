@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WorldCanvas } from "../map/WorldCanvas.jsx";
+import { RunControls } from "./RunControls.jsx";
+import { AgentInspector } from "./AgentInspector.jsx";
 import { eventGraph, worldGraph } from "../map/simulationAdapter.js";
 
 async function api(path, method = "GET", payload) {
@@ -43,6 +45,9 @@ export function SimulationLab() {
   const [events, setEvents] = useState([]);
   const [checkpoint, setCheckpoint] = useState(null);
   const [graphLayer, setGraphLayer] = useState("events");
+  const [displayTick, setDisplayTick] = useState(Infinity);
+  const [replaying, setReplaying] = useState(false);
+  const [jobRevision, setJobRevision] = useState(0);
   const [selectedNode, setSelectedNode] = useState(null);
   const cursor = useRef(0);
 
@@ -106,7 +111,7 @@ export function SimulationLab() {
     }
     poll();
     return () => { live = false; clearTimeout(timer); };
-  }, [jobId]);
+  }, [jobId, jobRevision]);
 
   async function runTask(action) {
     setBusy(true);
@@ -159,7 +164,10 @@ export function SimulationLab() {
     setCheckpoint(null);
     setSelectedNode(null);
     setJob(null);
+    setDisplayTick(Infinity);
+    setReplaying(false);
     setJobId(id);
+    setJobRevision((number) => number + 1);
   }
 
   async function start(interventionId) {
@@ -178,11 +186,25 @@ export function SimulationLab() {
     });
   }
 
+  const maxTick = checkpoint?.tick || 0;
+  useEffect(() => {
+    if (!replaying) return undefined;
+    if (displayTick >= maxTick) {
+      setReplaying(false);
+      return undefined;
+    }
+    const timer = setTimeout(() => setDisplayTick((tick) => tick + 1), 750);
+    return () => clearTimeout(timer);
+  }, [replaying, displayTick, maxTick]);
+
+  const shownEvents = Number.isFinite(displayTick)
+    ? events.filter((event) => event.tick <= displayTick)
+    : events;
   const graph = useMemo(() =>
     graphLayer === "world"
       ? worldGraph(checkpoint?.serializedState?.world, scenario?.question)
-      : eventGraph(events, scenario?.question, job?.runId || "simulation"),
-    [graphLayer, checkpoint, events, scenario?.question, job?.runId]
+      : eventGraph(shownEvents, scenario?.question, job?.runId || "simulation"),
+    [graphLayer, checkpoint, shownEvents, scenario?.question, job?.runId]
   );
   const inspected = graph.find((item) => item.targetId === selectedNode);
 
@@ -294,6 +316,19 @@ export function SimulationLab() {
                     onClick={() => start(option.id)}>run alternative</button>
                 </div>
               ))}
+              <details className="simulation-assumptions">
+                <summary>assumptions and source links</summary>
+                <p>these numbers came from the setup, not from generated agents.</p>
+                <ul>
+                  {scenario.baselineState.entities.map((entity) => (
+                    <li key={entity.id}>
+                      {entity.label} · {entity.provenance} ·
+                      {Object.entries(entity.attributes).map(([key, value]) =>
+                        " " + key + ": " + value).join(", ")}
+                    </li>
+                  ))}
+                </ul>
+              </details>
               <h3>saved experiments</h3>
               {history.map((item) => (
                 <div className="simulation-option" key={item.id}>
@@ -308,15 +343,17 @@ export function SimulationLab() {
             <div className="simulation-results">
               <h3>rounds in motion</h3>
               <p data-testid="simulation-job-status">{job.status} · {events.length} events</p>
-              <div className="history-actions">
-                {job.status === "running" && <button type="button" className="text-button"
-                  onClick={() => changeJob("pause")}>pause job</button>}
-                {job.status === "paused" && <button type="button" className="text-button"
-                  onClick={() => changeJob("resume")}>resume job</button>}
-                {["running", "queued", "paused"].includes(job.status) &&
-                  <button type="button" className="text-button"
-                    onClick={() => changeJob("cancel")}>cancel job</button>}
-              </div>
+              <RunControls
+                job={job} checkpoint={checkpoint} currentTick={displayTick}
+                replaying={replaying}
+                onReplay={() => { setDisplayTick(0); setReplaying(true); }}
+                onStopReplay={() => setReplaying(false)}
+                onScrub={(tick) => { setDisplayTick(tick); setReplaying(false); }}
+                onLive={() => { setDisplayTick(Infinity); setReplaying(false); }}
+                onPauseJob={() => changeJob("pause")}
+                onResumeJob={() => changeJob("resume")}
+                onCancelJob={() => changeJob("cancel")}
+              />
               <div className="history-actions">
                 <button type="button" className="text-button"
                   aria-pressed={graphLayer === "events"}
@@ -341,15 +378,14 @@ export function SimulationLab() {
                 </div>
               )}
               {inspected && (
-                <div className="simulation-inspector">
-                  <h3>{inspected.name}</h3>
-                  <p>{inspected.explanation}</p>
-                  <small>{inspected.provenance} · {inspected.who || "world input"}</small>
-                </div>
+                <AgentInspector
+                  event={events.find((item) => item.id === inspected.id) || inspected}
+                  checkpoint={checkpoint} runId={job.runId}
+                />
               )}
               {events.length > 96 && <p>showing the first 96 events on the map; the timeline has every event.</p>}
               <ol className="simulation-timeline">
-                {events.map((item) => <li key={item.id}>
+                {shownEvents.map((item) => <li key={item.id}>
                   <strong>round {item.tick} · {item.type.replaceAll("_", " ")}</strong>
                   <small>{item.actorId} · simulated event</small>
                   <span>{item.payload.rationale || item.payload.response ||
