@@ -10,6 +10,7 @@ services:
       # How many reverse proxies sit in front of this container. 1 = Caddy or nginx on the same machine;
       # 2 = Cloudflare in front of Caddy or nginx. Wrong values make rate limits per proxy, not per visitor.
       TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
+      RIPPLE_DB_PATH: ":memory:"
     # Only the proxy on this machine can reach it. Change to "8787:8787" if the proxy is on another box.
     ports:
       - "127.0.0.1:8787:8787"

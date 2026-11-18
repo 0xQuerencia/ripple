@@ -1,6 +1,6 @@
 {
   "name": "ripple",
-  "version": "0.1.0",
+  "version": "0.2.0-experimental.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -27,5 +27,5 @@
     "vite": "^6.3.5"
   },
   "license": "MIT",
-  "description": "Little causes, big consequences. Drop a cause on a map of 12 connected systems and watch Gemma 4 reason about the ripples."
+  "description": "Visual what-if graphs and experimental local decision rehearsal."
 }
