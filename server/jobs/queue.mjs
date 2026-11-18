@@ -24,10 +24,13 @@ export class SqliteJobQueue {
   enqueue({ id, ownerId, runId, rounds, maxAttempts = 3, now = Date.now() }) {
     if (typeof id !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,79}$/.test(id))
       throw new Error("Invalid job ID");
-    if (!boundedInteger(rounds, 1, 100) || !boundedInteger(maxAttempts, 1, 10))
+    if (!boundedInteger(rounds, 1, 12) || !boundedInteger(maxAttempts, 1, 10))
       throw new Error("Invalid job limits");
     if (!this.store.getRun(ownerId, runId)) throw new Error("Run not found");
     const prior = this.db.prepare("SELECT * FROM jobs WHERE id = ?").get(id);
+    const active = this.db.prepare("SELECT COUNT(*) AS count FROM jobs WHERE owner_id = ? AND status IN ('queued','running')")
+      .get(ownerId).count;
+    if (!prior && active >= 2) throw new Error("Only two active jobs per owner");
     if (prior) {
       if (prior.owner_id !== ownerId || prior.run_id !== runId || prior.rounds !== rounds)
         throw new Error("Conflicting job");

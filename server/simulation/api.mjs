@@ -82,6 +82,12 @@ export function createSimulationApi(store, queue) {
             if (store.listScenarios(OWNER, projectId).length >= 50)
               throw new Error("Too many scenarios in this project");
             const input = await bodyOf(req);
+            if (!Array.isArray(input.segments) || input.segments.length > 19 ||
+                input.segments.length < 1)
+              throw new Error("Use 1–19 customer segments");
+            const rounds = input.rounds ?? 6;
+            if (!Number.isInteger(rounds) || rounds < 1 || rounds > 12)
+              throw new Error("Use 1–12 simulation rounds");
             const world = buildWorld({
               project, claims: store.listClaims(OWNER, projectId),
               companyName: input.companyName, baselinePrice: input.baselinePrice,
@@ -90,7 +96,7 @@ export function createSimulationApi(store, queue) {
             });
             const scenario = createPricingScenario({
               world, projectId, question: input.question,
-              interventions: input.interventions, rounds: input.rounds ?? 6,
+              interventions: input.interventions, rounds,
               seed: input.seed ?? 1
             });
             store.putScenario(OWNER, projectId, scenario);

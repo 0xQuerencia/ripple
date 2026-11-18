@@ -10,12 +10,19 @@ const json = (res, code, value) => {
 
 export function isLocal(req) {
   const address = req.socket?.remoteAddress ?? "";
-  const host = String(req.headers?.host ?? "").split(":")[0].replace(/^\[|\]$/g, "");
+  let host, expectedOrigin;
+  try {
+    const hostUrl = new URL("http://" + String(req.headers?.host || ""));
+    host = hostUrl.hostname.replace(/^\[|\]$/g, "");
+    expectedOrigin = hostUrl.host;
+  } catch {
+    return false;
+  }
   const origin = req.headers?.origin;
   const remote = address === "::1" || address === "127.0.0.1" || address.startsWith("::ffff:127.");
   try {
     return remote && ["localhost", "127.0.0.1", "::1"].includes(host) &&
-      (!origin || new URL(origin).host === req.headers.host);
+      (!origin || new URL(origin).host === expectedOrigin);
   } catch {
     return false;
   }

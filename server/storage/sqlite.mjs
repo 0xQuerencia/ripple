@@ -14,6 +14,8 @@ const TABLES = [
 export class SqliteEventStore {
   constructor(filename = ":memory:") {
     this.db = new DatabaseSync(filename);
+    this.db.exec("PRAGMA journal_mode=WAL");
+    this.db.exec("PRAGMA busy_timeout=5000");
     this.db.exec(TABLES);
   }
 
@@ -163,11 +165,18 @@ export class SqliteEventStore {
   putSource(ownerId, projectId, source, parsed) {
     this.initSources();
     validateSource(source);
+    if (parsed?.hash !== source.hash || parsed?.bytes !== source.bytes ||
+        parsed?.kind !== source.kind || typeof parsed.text !== "string")
+      throw new Error("Source metadata does not match parsed content");
     if (source.ownerId !== ownerId || source.projectId !== projectId || !this.getProject(ownerId, projectId))
       throw new Error("Project not found");
     const duplicate = this.db.prepare("SELECT metadata FROM sources WHERE owner_id = ? AND project_id = ?")
       .all(ownerId, projectId).find((row) => JSON.parse(row.metadata).hash === source.hash);
     if (duplicate) return JSON.parse(duplicate.metadata);
+    const existingFiles = this.listSources(ownerId, projectId);
+    if (existingFiles.length >= 50 ||
+        existingFiles.reduce((total, file) => total + file.bytes, 0) + source.bytes > 5 * 1024 * 1024)
+      throw new Error("Project evidence storage limit reached");
     this.db.prepare("INSERT INTO sources VALUES (?, ?, ?, ?, ?)")
       .run(source.id, ownerId, projectId, JSON.stringify(source), JSON.stringify(parsed));
     return source;
@@ -218,6 +227,8 @@ export class SqliteEventStore {
     if (!this.getProject(ownerId, projectId) || !Array.isArray(claims) || claims.length > 200)
       throw new Error("Invalid claims batch");
     const existing = this.listClaims(ownerId, projectId);
+    if (existing.length + claims.length > 1000)
+      throw new Error("Too many claims in this project");
     const spans = new Set(existing.map((claim) => {
       const span = claim.sourceSpans[0];
       return span?.sourceId + ":" + (span?.row ?? span?.charStart);
