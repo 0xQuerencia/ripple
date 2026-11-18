@@ -17,7 +17,7 @@ export class SqliteEventStoreCore {
       this.db.exec("PRAGMA journal_mode=WAL");
       this.db.exec("PRAGMA busy_timeout=5000");
     }
-    this.db.exec(native ? TABLES : TABLES.replace("PRAGMA foreign_keys = ON;\\n", ""));
+    this.db.exec(native ? TABLES : TABLES.replace("PRAGMA foreign_keys = ON;", ""));
   }
 
   transaction(callback) {
